@@ -4,8 +4,15 @@ import { Navigate } from 'react-router-dom';
 
 const Login = ({mode = "login"}) => {
   const isRegister = mode==="register";
-  const {isLoaded,isSignedIn} = useUser()
+  const {isLoaded,isSignedIn,user} = useUser()
+  
+
+  
+
+
+
   if(isLoaded && isSignedIn){
+    
     return <Navigate to="/dashboard" replace/>
   }
   return (
@@ -19,6 +26,7 @@ const Login = ({mode = "login"}) => {
      </div>
     </div>
   )
+  
 }
 
 export default Login
