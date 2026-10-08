@@ -2,6 +2,9 @@ import { SignIn, SignUp, useUser } from '@clerk/react';
 import React from 'react'
 import { Navigate } from 'react-router-dom';
 
+
+
+
 const Login = ({mode = "login"}) => {
   const isRegister = mode==="register";
   const {isLoaded,isSignedIn,user} = useUser()
