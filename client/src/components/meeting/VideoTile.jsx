@@ -6,7 +6,7 @@ const VideoTile = ({stream,name,isLocal=false,audioEnabled= true,videoEnabled = 
     useEffect(()=>{
         if(videoRef.current && stream){
        
-            videoRef.current.srcObject = stream;
+             videoRef.current.srcObject = stream;
 
            
 
@@ -16,7 +16,7 @@ const VideoTile = ({stream,name,isLocal=false,audioEnabled= true,videoEnabled = 
   return (
     <div className='relative w-full h-full min-h-50 bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-md flex items-center justify-center group'>
         <video ref = {videoRef} autoPlay playsInline muted = {isLocal} 
-        className={`w-full h-full object-cover transition-opacity duration-300 ${videoEnabled ?"opacity-100":"opacity-0 pointer-events-none absolute"} ${isLocal?"-scale-x-100":""}`}/>
+        className={`w-full h-full object-cover transition-opacity duration-300 ${videoEnabled ?"opacity-100":"opacity-0 pointer-events-none absolute "} ${isLocal?"-scale-x-100":""}`}/>
        
         {/* Camera Off Placeholder */}
 

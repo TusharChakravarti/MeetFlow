@@ -5,6 +5,10 @@ import { dummyMeetingDetails, dummyRemoteParticipants, dummyUser } from '../asse
 
 import VideoGrid from '../components/meeting/VideoGrid'
 import useWebRTC from '../hooks/useWebRTC'
+import ChatPanel from '../components/meeting/ChatPanel'
+import { useChat } from '../hooks/useChat'
+import ParticipantList from '../components/meeting/ParticipantList'
+import ControlBar from '../components/meeting/ControlBar'
 
 
 
@@ -13,7 +17,7 @@ const MeetingRoom = () => {
   const {meetingId} = useParams()
   const navigate = useNavigate()
   const userData = dummyUser;
-  const [isParticipationOpen,setIsParticipationOpen] = useState(false)
+  const [isParticipantOpen,setIsParticipantOpen] = useState(false)
 
 
   const handleMeetingEnded = useCallback(()=>{
@@ -23,6 +27,10 @@ const MeetingRoom = () => {
   // Initialize WebRTC
 
   const {localStream,remoteUsers,audioEnabled,videoEnabled,toggleAudio,toggleVideo,endMeeting} = useWebRTC(meetingId,userData,handleMeetingEnded)
+
+  // Initialize Chat
+
+  const {messages,sendMessage,unreadCount,isChatOpen,toggleChat} = useChat(meetingId,userData)
 
 
   const isHost = true;
@@ -61,10 +69,46 @@ const MeetingRoom = () => {
         />
 
         {/* In-Meeting Chat Drawer */}
+        <ChatPanel 
+        isOpen = {isChatOpen}
+         onClose = {toggleChat}
+         messages = {messages}
+         onSendMessage = {sendMessage}
+         currentUser = {userData}
+         
+        />
 
         {/* Participants Drawer */}
 
+        <ParticipantList
+         isOpen = {isParticipantOpen}
+        onClose = {()=> setIsParticipantOpen(false)}
+        localUser = {userData}
+        localAudio = {audioEnabled}
+        localVideo = {videoEnabled}
+        remoteUsers = {remoteUsers}
+        meetingHostId = {dummyUser.id}
+        />
+
+
         {/* Bottom Floating Control Bar */}
+
+        <ControlBar
+        roomId = {meetingId}
+        audioEnabled = {audioEnabled}
+        VideoEnabled = {videoEnabled}
+        OnToggleAudio = {toggleAudio}
+        OnToggleVideo = {toggleVideo}
+        onToggleChat = {toggleChat}
+        onToggleParticipants ={()=> setIsParticipantOpen(false)}
+         isChatOpen = {isChatOpen}
+         isParticipantOpen =  {isParticipantOpen}
+        unreadCount = {unreadCount}
+    participantCount ={dummyUser.length}
+    isHost = {isHost}
+    onLeave = {handleLeave}
+    onEndMeeting = {handleMeetingEnded}
+        />
 
       </div>
   
