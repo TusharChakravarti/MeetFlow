@@ -1,5 +1,7 @@
 // Dummy data & assets for frontend
 
+import { Feather } from "lucide-react";
+
 export const dummyUser = {
     id: "user_mock_001",
     fullName: "Alex Rivera",
@@ -234,3 +236,38 @@ export const dummyInitialChatMessages = [
         time: "02:16 PM",
     },
 ];
+
+export const plans = 
+[
+    {
+        name:"Free",
+        price:"₹0",
+        period:"Always Free",
+        features:[
+            "SD Quality",
+            "30 Meetings",
+            "Max 10 Participants",
+            "No Recording",
+            "Limited Chat History",
+            "Max 60, Minutes Duration"
+        ],
+
+    },
+    {
+        name:"Premium",
+        price: "₹499",
+        period: "Month",
+    features: [
+      "HD Quality",
+      "Unlimited Meetings",
+      "100 Participants",
+      "Meeting Recordings",
+      "Full Chat History",
+      "No Duration Limit",
+    ],
+    },
+       
+
+
+
+]

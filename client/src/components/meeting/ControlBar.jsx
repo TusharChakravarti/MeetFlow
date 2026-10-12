@@ -19,8 +19,10 @@ const ControlBar = ({roomId,audioEnabled,VideoEnabled,OnToggleAudio,OnToggleVide
               <span className='text-xs font-medium text-slate-600 font-mono tracking-wider'>Id:{roomId}</span>
               <button onClick={copyMeetingId}
               className='p-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium cursor-pointer transition-all '
-              >{copied?<CheckIcon className='w-3.5 h-3.5 text-emerald-600'/>:<CopyIcon className='w-3.5 h-3.5'/>}</button>
+              >{copied?<CheckIcon className='w-3.5 h-3.5 text-emerald-600'/>:<CopyIcon className='w-3.5 h-3.5'/>}
               <span>{copied ? "Copied":"Copy Link"}</span>
+              </button>
+              
             </div>
              {/* Center Controls */}
              <div className='flex items-center gap-3 mx-auto sm:mx-0'>
