@@ -9,6 +9,7 @@ import ChatPanel from '../components/meeting/ChatPanel'
 import { useChat } from '../hooks/useChat'
 import ParticipantList from '../components/meeting/ParticipantList'
 import ControlBar from '../components/meeting/ControlBar'
+import toast from 'react-hot-toast'
 
 
 
@@ -36,12 +37,16 @@ const MeetingRoom = () => {
   const isHost = true;
 
   const handleLeave = ()=>{
+    toast("You left the meeting")
+    navigate("/dashboard")
   
   }
 
     const handleEndMeeting = ()=>{
+     endMeeting();
+     toast("Meeting ended for all participants")
     
-  }
+  } 
 
 
 
@@ -91,26 +96,29 @@ const MeetingRoom = () => {
         />
 
 
-        {/* Bottom Floating Control Bar */}
+    
+
+      </div>
+
+          {/* Bottom Floating Control Bar */}
 
         <ControlBar
-        roomId = {meetingId}
+        roomId = {meetingId||dummyMeetingDetails.meetingId}
         audioEnabled = {audioEnabled}
         VideoEnabled = {videoEnabled}
         OnToggleAudio = {toggleAudio}
         OnToggleVideo = {toggleVideo}
         onToggleChat = {toggleChat}
-        onToggleParticipants ={()=> setIsParticipantOpen(false)}
+        onToggleParticipants ={()=> setIsParticipantOpen((prev)=>!prev)}
          isChatOpen = {isChatOpen}
          isParticipantOpen =  {isParticipantOpen}
         unreadCount = {unreadCount}
-    participantCount ={dummyUser.length}
-    isHost = {isHost}
-    onLeave = {handleLeave}
-    onEndMeeting = {handleMeetingEnded}
-        />
+         participantCount ={1+remoteUsers.length}
+        isHost = {isHost}
+        onLeave = {handleLeave}
+        onEndMeeting = {handleEndMeeting}
 
-      </div>
+        />
   
      <div>
 

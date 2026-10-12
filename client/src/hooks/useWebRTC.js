@@ -14,7 +14,7 @@ const useWebRTC = (_roomID,user,onMeetingEnded,_enabled = true) => {
   
     
     try {
-      if(navigator?.mediaDevices?.getUserMedia()){
+      if(navigator?.mediaDevices?.getUserMedia){
         
         const stream = await navigator?.mediaDevices?.getUserMedia({
           video:true,
