@@ -25,7 +25,7 @@ const Pricing = () => {
 
   const subscribe = async ()=>{
     if(!isSignedIn){
-      setError("Please Sign in before upgrading.")
+      toast("Please Sign in before upgrading.")
       return;
     }
 
@@ -83,7 +83,7 @@ const Pricing = () => {
 
     });
     checkout.on("payment.failed",(event)=>{
-      setError(
+      throw Error(
         event.error?.description || "Payment failed. Please try again."
       )
        setLoading(false);

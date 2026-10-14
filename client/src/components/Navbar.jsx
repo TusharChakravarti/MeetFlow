@@ -6,7 +6,7 @@ import {UserButton, useUser} from '@clerk/react'
 
 const Navbar = () => {
      const {isSignedIn,user} = useUser() 
-   // {user:dummyUser,isSignedIn:true}
+ 
     const location  = useLocation()
     const userName = user?.fullName||user?.firstName || user?.primaryEmailAddress?.emailAddress?.split("@")[0]||"U ser"
     
