@@ -11,7 +11,7 @@ try {
         case "user.created":{
         const userId = data.id
         const primaryEmail = data.email_addresses?.[0]?.email_address || ""
-         const name = `${data.first_name || "User" } ${data.last_name||""} `
+        const name = `${data.first_name || "User"} ${data.last_name || ""}`.trim();
          const image = data.image_url || ""
          const plan  =  "free"
         
@@ -23,7 +23,7 @@ try {
          id = EXCLUDED.id,
          name = EXCLUDED.name,
          image = EXCLUDED.image,
-         plan  = EXCLUDED.plan,
+         plan = EXCLUDED.plan,
          updated_at = NOW()
          `;
 
