@@ -7,7 +7,7 @@ import { clerkMiddleware } from '@clerk/express'
 import {handleClerkWebhook}  from "./controllers/webhookController.js"
  const app = express()
  // Connect To Neon  & Initialize Tables
-initDB()
+await initDB()
 
 
 

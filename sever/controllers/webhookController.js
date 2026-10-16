@@ -19,7 +19,7 @@ try {
          await sql`
          INSERT INTO users(id,name,email,image,plan)
          VALUES (${userId}, ${name}, ${primaryEmail} ,${image}, ${plan})
-         ON CONFLICT (email) DO UPDATE SET
+         ON CONFLICT (id) DO UPDATE SET
          id = EXCLUDED.id,
          name = EXCLUDED.name,
          image = EXCLUDED.image,
@@ -40,11 +40,11 @@ try {
          await sql`
          UPDATE  users 
          SET 
-         id = ${userId},
+         email = ${primaryEmail},
          name = ${name},
          image = ${image},
          updated_at = NOW()
-         WHERE email = ${primaryEmail}
+        WHERE id = ${userId}
         `;
 
         break;
