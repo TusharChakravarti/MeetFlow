@@ -21,6 +21,7 @@ try {
          VALUES (${userId}, ${name}, ${primaryEmail} ,${image}, ${plan})
          ON CONFLICT (id) DO UPDATE SET
          id = EXCLUDED.id,
+          email = EXCLUDED.email,
          name = EXCLUDED.name,
          image = EXCLUDED.image,
          plan = EXCLUDED.plan,
@@ -38,13 +39,14 @@ try {
         
 
          await sql`
-         UPDATE  users 
-         SET 
-         email = ${primaryEmail},
-         name = ${name},
-         image = ${image},
+             INSERT INTO users(id,name,email,image)
+         VALUES (${userId}, ${name}, ${primaryEmail} ,${image})
+         ON CONFLICT (id) DO UPDATE SET
+         id = EXCLUDED.id,
+          email = EXCLUDED.email,
+         name = EXCLUDED.name,
+         image = EXCLUDED.image,
          updated_at = NOW()
-        WHERE id = ${userId}
         `;
 
         break;
