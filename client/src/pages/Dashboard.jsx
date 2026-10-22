@@ -4,20 +4,44 @@ import React, { useEffect, useState } from 'react'
 import { dummyStats, dummyUser } from '../assets/asset';
 import { useNavigate } from 'react-router-dom';
 import toast from "react-hot-toast"
+import api from '../config/api.js';
 const Dashboard = () => {
   const {user}  = useUser()
  const userName = user.fullName;
  const userEmail = user.primaryEmailAddress.emailAddress
+ const {isLoaded,isSignedIn,getToken} = useAuth()
  const navigate  = useNavigate()
  const [isCreating,setIsCreating] = useState(false)
  const [currentTime,setCurrentTime] = useState(new Date())
- const stats = dummyStats;
+const [stats,setStats] = useState(null);
   const [joinId,setJoinId] = useState("")
 
  useEffect(()=>{
   const timer  = setInterval(()=>setCurrentTime(new Date()),1000);
   return ()=>clearInterval(timer)
  },[])
+
+ useEffect(()=>{
+  const fetchStats = async ()=>{
+    if(!isLoaded || !isSignedIn) return
+    try {
+      const token = await getToken()
+      const {data} = await api.get("/api/meetings/stats",{
+        headers:{Authorization:`Bearer ${token}`}
+      })
+   
+     
+      setStats(data)
+      
+      console.log(data);
+      
+      
+    } catch (error) {
+      toast.error(error.response?.data?.error||error.message)
+    }
+  }
+  fetchStats()
+ },[isLoaded,isSignedIn,getToken])
  
  const handleCreateMeeting = ()=>{
   setIsCreating(true)
