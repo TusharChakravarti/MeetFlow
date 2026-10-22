@@ -93,8 +93,9 @@ res.status(201).json({
 
         
     } catch (error) {
+        console.error("createMeeting failed:",error)
        res.status(500).json({
-        error:error.message
+       error:"Failed to create meeting"
        })
     }
 }
@@ -139,8 +140,9 @@ try {
     })
 
 } catch (error) {
-      res.status(500).json({
-        error:error.message
+        console.error("Fetch Meeting failed:",error)
+       res.status(500).json({
+       error:"Failed to fetch meeting"
        })
 }
 }
@@ -215,8 +217,9 @@ const formattedMeeting = await Promise.all(
 )
       res.json({meetings:formattedMeeting})
    } catch (error) {
-      res.status(500).json({
-        error:error.message
+       console.error("get User sessions failed:",error)
+       res.status(500).json({
+       error:"Failed to get user sessions"
        })
 
    }
@@ -230,6 +233,7 @@ export const getSessionDetails= async(req,res)=>{
 try {
     
     const {id} = req.params;
+    const {userId} = req.user.id
 
     const meetings = await sql`
     SELECT m.*,
@@ -247,6 +251,19 @@ try {
         })
     }
     const m = meetings[0];
+  if(m.host_id !== userId){
+    const membership = await sql`
+    SELECT 1 FROM meeting_participants
+    WHERE meeting_id  = ${m.id} AND user_id = ${userId} 
+    LIMIT 1`
+    
+    if(membership.length==0){
+        return res.status(404).json({
+            error:"Session details not found"
+        })
+    }
+  }
+
 
     const participants = await sql`
       SELECT mp.* ,u.email
@@ -295,10 +312,10 @@ try {
   })
 
 } catch (error) {
-          res.status(500).json({
-        error:error.message
+       console.error("get sessions details failed:",error)
+       res.status(500).json({
+       error:"Failed to get session details"
        })
-
 }
 
 }
@@ -334,8 +351,9 @@ try {
     })
     
 } catch (error) {
-        res.status(500).json({
-        error:error.message
+       console.error("get meeting stats failed:",error)
+       res.status(500).json({
+       error:"Failed to get meeting stats"
        })
 }
 }
