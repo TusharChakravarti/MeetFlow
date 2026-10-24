@@ -50,13 +50,13 @@ const isEnded = session.status === "ended"
          <button onClick={()=> setActiveTab("chat")}
          className={`py-3 px-4 font-medium text-sm border-b-2 cursor-pointer transition-all ${activeTab==="chat" ? "border-primary text-primary":"border-transparent text-slate-500 hover:text-slate-800"}`}
           >
-          Chat Transcript ({session.participants?.length || 0 })
+          Chat Transcript ({session.messages?.length || 0 })
          </button>
 
           <button onClick={()=> setActiveTab("participants")}
          className={`py-3 px-4 font-medium text-sm border-b-2 cursor-pointer transition-all ${activeTab==="participants" ? "border-primary text-primary":"border-transparent text-slate-500 hover:text-slate-800"}`}
           >
-          Participants Log ({session.messages?.length || 0 })
+          Participants Log ({session.participants?.length || 0 })
          </button>
 
          </div>

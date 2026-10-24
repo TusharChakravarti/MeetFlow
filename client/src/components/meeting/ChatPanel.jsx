@@ -37,13 +37,13 @@ const ChatPanel = ({isOpen, onClose,messages,onSendMessage,currentUser}) => {
      {/* Message Container */}
 
      <div className='flex-1 p-4 overflow-y-auto space-y-4'>
-       {messages.length === 0 ?(
+       {messages?.length === 0 ?(
         <div className='h-full flex flex-col items-center justify-center text-center text-slate-400 text-sm'>
           <p>No messages yet</p>
           <p className='test-xs mt-1 text-slate-400 '>Send a message to start chatting with participant </p>
         </div>
        ):(
-        messages.map((msg,index)=>{
+        messages?.map((msg,index)=>{
           const isMe = msg.senderId === currentUser?.id
 
           return (

@@ -14,6 +14,6 @@ meetingRouter.get("/sessions",protect,getUserSessions)
 
 meetingRouter.get("/sessions/:id",protect,getSessionDetails)
 
-meetingRouter.get("/:meetingId ",protect,getMeeting)
+meetingRouter.get("/:meetingId",protect,getMeeting)
 
 export default meetingRouter 

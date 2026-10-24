@@ -38,8 +38,11 @@ const Pricing = () => {
 
      // request backend yo create a Razorpay subscription
 
-     const response= await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/billing/create-subscription`,
-      {billingPeriod},
+     const response= await api.post(`/api/billing/create-subscription`,
+      {
+        billingPeriod,
+        
+      },
       {
       headers:{
        "Content-Type":"application/json",

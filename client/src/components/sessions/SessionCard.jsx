@@ -12,7 +12,7 @@ const SessionCard = ({session,onOpenDetails,onRejoin}) => {
             <div className='flex items-center justify-between'>
                 <span className='text-xs font-mono text-slate-500 font-medium bg-slate-500/5 px-2.5 py-1 rounded-md'>ID:{session.meetingId}</span>
                 <span
-                className={`text-xs font-semibold px-2.\ py-1 rounded-full flex items-center gap-1.5 ${isEnded?"bg-slate-500/5 text-slate-500":"bg-emerald-500/5 text-emerald-500"}`}
+                className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5 ${isEnded?"bg-slate-500/5 text-slate-500":"bg-emerald-500/5 text-emerald-500"}`}
                 >
                     < span className={`size-1.25 rounded-full ${isEnded ?"bg-slate-400":"bg-emerald-500 "} `}/>
 
@@ -55,7 +55,7 @@ const SessionCard = ({session,onOpenDetails,onRejoin}) => {
 
         {/* Actions */}
         <div className='flex items-center justify-between gap-3 pt-2'>
-         <button onClick={()=> onOpenDetails(session.id)}
+         <button onClick={()=> onOpenDetails(session.meetingId)}
          className='w-full bg-slate-400/10 hover:bg-slate-400/20 text-slate-800 font-medium py-2.5 px-4 rounded-full text-xs transition-all cursor-pointer text-center '
             >
             View Details
@@ -69,7 +69,7 @@ const SessionCard = ({session,onOpenDetails,onRejoin}) => {
                 </button>
             )
          }
-        </div>
+        </div> 
 
     </div>
   )

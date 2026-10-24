@@ -1,14 +1,16 @@
  import express from "express"
  import "dotenv/config"
  import cors from "cors"
- import http, { Server } from "http"
+ import http from "http"
+ import { Server } from "socket.io"
 import cookieParser from "cookie-parser";
 import { initDB } from "./config/db.js";
 import { clerkMiddleware } from '@clerk/express'
-import {handleClerkWebhook}  from "./controllers/webhookController.js"
+import {handleClerkWebhook, handleRazorpayWebhook}  from "./controllers/webhookController.js"
 import meetingRouter from "./routes/meetingRoutes.js";
 import { setupSocketIO } from "./socket.js";
 import { error } from "console";
+import billingRouter from "./routes/PricingRoutes.js";
  const app = express()
  const server = http.createServer(app)
  // Connect To Neon  & Initialize Tables
@@ -21,6 +23,7 @@ const allowedOrigins = process.env.ORIGINS.split(",")
  app.use(cookieParser())
 
 app.post("/api/clerk",express.raw({type:"application/json"}),handleClerkWebhook)
+app.post("/api/webhooks/razorpay",express.raw({type:"application/json"}), handleRazorpayWebhook)
 
 
  app.use(express.json())
@@ -29,16 +32,17 @@ app.post("/api/clerk",express.raw({type:"application/json"}),handleClerkWebhook)
 
  app.get("/",(req,res)=> res.send("API is Live!"))
  app.use("/api/meetings",meetingRouter)
+ app.use("/api/billing",billingRouter)
 
 
-//  const io = new Server(server,{
-//     cors:{
-//         origin:allowedOrigins,
-//         credentials:true
-//     }
-//  })
+ const io = new Server(server,{
+    cors:{
+        origin:allowedOrigins,
+        credentials:true
+    }
+ })
 
-//  setupSocketIO(io)
+ setupSocketIO(io)
 
  // Centralized Error Handler
 

@@ -62,9 +62,10 @@ export const createMeeting = async(req,res)=>{
         
      }
 
+     const status = "active"
      const [meeting]= await sql`
      INSERT INTO meetings(meeting_id,title,host_id,status)
-     VALUES (${meetingId},${title||"Instant Meeting"}, ${userId} , "active" )
+     VALUES (${meetingId},${title||"Instant Meeting"}, ${userId} , ${status} )
      RETURNING id,meeting_id,title,host_id,status,created_at
      `
 
@@ -122,7 +123,7 @@ try {
         })
     }
 
-    res.json({
+    return res.json({
    meeting:{
         id:meeting.id,
         meetingId:meeting.meeting_id,
@@ -233,7 +234,7 @@ export const getSessionDetails= async(req,res)=>{
 try {
     
     const {id} = req.params;
-    const {userId} = req.user.id
+    const userId = req.user.id
 
     const meetings = await sql`
     SELECT m.*,
@@ -251,7 +252,7 @@ try {
         })
     }
     const m = meetings[0];
-  if(m.host_id !== userId){
+  if(String(m.host_id) !== String(userId)){
     const membership = await sql`
     SELECT 1 FROM meeting_participants
     WHERE meeting_id  = ${m.id} AND user_id = ${userId} 
@@ -288,7 +289,7 @@ try {
     host:{
        id:m.host_user_id,
        name:m.host_name,
-       email:m.host.email 
+       email:m.host_email 
     },
         participants:participants.map((p)=>({
                  user:p.user_id ? {id:p.user_id,email:p.email}:null,
@@ -307,7 +308,7 @@ try {
 
   }
 
-  res.json({
+  return res.json({
     meetings:formattedMeeting
   })
 

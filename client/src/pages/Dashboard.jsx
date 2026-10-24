@@ -1,7 +1,7 @@
 import { useAuth, useUser } from '@clerk/react';
 import { ArrowRight, ArrowRightIcon, Keyboard, KeyboardIcon, PlusIcon, ShieldCheckIcon } from 'lucide-react';
 import React, { useEffect, useState } from 'react'
-import { dummyStats, dummyUser } from '../assets/asset';
+
 import { useNavigate } from 'react-router-dom';
 import toast from "react-hot-toast"
 import api from '../config/api.js';
@@ -33,7 +33,7 @@ const [stats,setStats] = useState(null);
      
       setStats(data)
       
-      console.log(data);
+      
       
       
     } catch (error) {
@@ -43,31 +43,54 @@ const [stats,setStats] = useState(null);
   fetchStats()
  },[isLoaded,isSignedIn,getToken])
  
- const handleCreateMeeting = ()=>{
+ const handleCreateMeeting = async ()=>{ 
+  if(!isLoaded || !isSignedIn) return;
   setIsCreating(true)
-  const chars = "abcdefghijklmnopqrstuvwxyz"
-  const seg = ()=>Array.from({length:3},()=>chars[Math.floor(Math.random()*chars.length)]
-  ).join('');
-  
 
-  const newMeetingId = `${seg()}-${seg()}-${seg()}`
+  try {
+    const token = await getToken()
+    const response = await api.post("/api/meetings",{
+      title: `${userName}'s Meeting`
+    },
+    {
+      headers:`Bearer ${token}`
+    })
+    const meetingId = response.data.meeting.meetingId
+    
+    toast.success("Meeting Created!")
+    navigate(`/meeting/${meetingId}`)
+    
+  } catch (error) {
+    toast.error(error.response?.data?.error || error.message)
+  }
+  finally{
+ setIsCreating(false)
+  }
 
-  setTimeout(()=>{
-    setIsCreating(false)
-   toast.success("Meeting Created!")
-   navigate(`/meeting/${newMeetingId}`)
-  },400)
 
  }
 
- const handleJoinMeeting = (e)=>{
+ const handleJoinMeeting = async (e)=>{
   e.preventDefault()
   const cleanId = joinId.trim();
   if(!cleanId || !/^[a-z]{3}(?:-[a-z]{3}){2}$/.test(cleanId)){
     toast.error("Please Enter a valid Meeting Id")
     return;
   }
-  navigate(`/meeting/${encodeURIComponent(cleanId)}`)
+  try {
+    const token = await getToken()
+    await api.get(`/api/meetings/${cleanId}`,{
+      headers:{
+        Authorization:`Bearer ${token}`
+      }
+    })
+    navigate(`/meeting/${cleanId}`)
+    
+  } catch (error) {
+    toast.error("Meeting not found.Check the ID and try again")
+    
+  }
+  
  }
 
   
