@@ -114,6 +114,28 @@ socket.to(roomId).emit("user-joined",currentUser)
   }
  })
 
+ socket.on("typing",({roomId,userId,userName})=>{
+    if(!roomId || !userName) return;
+
+    if(!socket.rooms.has(roomId)) return;
+
+    // Notify other participants
+    socket.to(roomId).emit("user-typing",{
+        userId,
+        userName
+    })
+
+ })
+
+ socket.on("stop-typing",({roomId,userId})=>{
+        if(!roomId || !userId) return;
+
+    if(!socket.rooms.has(roomId)) return;
+
+    socket.to(roomId).emit("user-stopping-typing",{
+        userId
+    })
+ })
  // WebRTC Signaling: Offer
 
  // send the information needed to start the connection

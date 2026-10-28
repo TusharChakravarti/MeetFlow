@@ -1,6 +1,6 @@
 import express from "express"
 import { protect } from "../middleware/auth.js";
-import {  cancelSubscription, createPlan, createSubscription, fetchPlanByID, fetchPlans, fetchSubscriptionById, fetchSubscriptions, pauseSubscription, updateSubscriptionById } from "../controllers/billingController.js";
+import {  cancelSubscription, createPlan, createSubscription, fetchPlanByID, fetchPlans, fetchSubscriptionById, fetchSubscriptions, updateSubscriptionById, verifySubscriptionPayment } from "../controllers/billingController.js";
 
 const billingRouter = express.Router();
 
@@ -10,12 +10,13 @@ billingRouter.get("/plans",fetchPlans)
 billingRouter.get("/plans/:id",fetchPlanByID)
 
 // Subscription Routes
-billingRouter.post("/subscriptions",createSubscription)
-billingRouter.get("/subscriptions",fetchSubscriptions)
-billingRouter.get("/subscriptions/:id",fetchSubscriptionById)
-billingRouter.post("/subscriptions/:id/cancel",cancelSubscription)
-billingRouter.patch("/subscriptions/:id",updateSubscriptionById)
-billingRouter.post("/subscriptions/:id/pause",pauseSubscription)
+billingRouter.post("/create-subscription",protect,createSubscription)
+billingRouter.post("/verify-subscription",protect,verifySubscriptionPayment)
+billingRouter.get("/subscriptions",protect,fetchSubscriptions)
+billingRouter.get("/subscriptions/:id",protect,fetchSubscriptionById)
+billingRouter.post("/subscriptions/:id/cancel",protect,cancelSubscription)
+billingRouter.patch("/subscriptions/:id",protect,updateSubscriptionById)
+
 
 
 

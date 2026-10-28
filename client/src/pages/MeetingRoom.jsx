@@ -51,7 +51,7 @@ return {
 
   // Initialize Chat
 
-  const {messages,sendMessage,unreadCount,isChatOpen,toggleChat} = useChat(meetingId,userData)
+  const {messages,sendMessage,unreadCount,isChatOpen,toggleChat,startTyping,stopTyping,typingUsers} = useChat(meetingId,userData)
 
 
   const hostId = meeting?.host?.id || meeting?.host
@@ -146,6 +146,9 @@ return {
          messages = {messages}
          onSendMessage = {sendMessage}
          currentUser = {userData}
+         startTyping = {startTyping}
+         stopTyping = {stopTyping}
+         typingUser  = {typingUsers}
          
         />
 

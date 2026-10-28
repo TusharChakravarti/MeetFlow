@@ -1,7 +1,7 @@
 import { SendIcon, XIcon } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react'
 
-const ChatPanel = ({isOpen, onClose,messages,onSendMessage,currentUser}) => {
+const ChatPanel = ({isOpen, onClose,messages,onSendMessage,currentUser, startTyping ,stopTyping,typingUser}) => {
   const [text,setText] = useState("")
   const  messagesEndRef = useRef(null);
 
@@ -19,6 +19,7 @@ const ChatPanel = ({isOpen, onClose,messages,onSendMessage,currentUser}) => {
     if(text.trim()){
       onSendMessage(text)
       setText("")
+      stopTyping()
     }
   }
 
@@ -29,7 +30,13 @@ const ChatPanel = ({isOpen, onClose,messages,onSendMessage,currentUser}) => {
      {/* Header */}
      <div className='p-4 border=b border-slate-200 flex flex-cemter justify-between'>
        <h3 className='font-medium text-slate-900 text-base flex items-center gap-2'>In Meeting Chat</h3>
-       <button onClick={onClose} className='p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer'>
+       <button onClick={()=>{
+        stopTyping(),
+        onClose()
+       }
+      
+
+        } className='p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer'>
         <XIcon className='h-5 w-5'/>
        </button>
      </div>
@@ -64,6 +71,13 @@ const ChatPanel = ({isOpen, onClose,messages,onSendMessage,currentUser}) => {
         })
        )}
 
+           {/* Typing Indicator */}
+    {typingUser?.length > 0 && (
+      <p className="text-xs text-slate-500 italic">
+        {typingUser?.map((person) => person.name).join(", ")} typing...
+      </p>
+    )}
+
        <div ref={messagesEndRef}/>
 
        </div>
@@ -73,7 +87,13 @@ const ChatPanel = ({isOpen, onClose,messages,onSendMessage,currentUser}) => {
          <input type="text" placeholder='Type a message...'
          value={text}
          onChange={(e)=>{
-          setText(e.target.value)
+          setText(e.target.value);
+          if(e.target.value.trim()){
+            startTyping()
+          }
+          else{
+            stopTyping()
+          }
          }}
          className='flex-1 bg-white border border-primary-border/80 focus:border-primary rounded-xl px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all shadow-xs'
          />

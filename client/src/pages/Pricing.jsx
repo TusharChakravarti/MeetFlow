@@ -1,8 +1,9 @@
 import { PricingTable, useAuth, useUser } from '@clerk/react'
 import React, { useState } from 'react'
 import  {plans} from "../assets/asset"
-import axios from "axios"
+import api from "../config/api"
 import toast from 'react-hot-toast'
+
 
 const Pricing = () => {
   const {getToken,isSignedIn} = useAuth()
@@ -36,11 +37,12 @@ const Pricing = () => {
       // Get the clerk authentication token
      const token = await getToken()
 
-     // request backend yo create a Razorpay subscription
+     const period = billingPeriod === "annual"?"yearly":"monthly"
+
 
      const response= await api.post(`/api/billing/create-subscription`,
       {
-        billingPeriod,
+        billingPeriod:period,
         
       },
       {
@@ -53,55 +55,110 @@ const Pricing = () => {
 
     
      );
-      
      const data = response.data;
+     const subscriptionId = data.subscription?.id;
+    
+
+     if(!subscriptionId){
+         throw new Error("Subscription ID was not returned.");
+     }
+
+  
+							
+							const  checkout = new Razorpay({
+                	key: data.keyId,
+									subscription_id: subscriptionId,
+									name: "MeetFlow",
+								  description: `Premium ${period} subscription`,
+									image: `${window.location.origin}/logo.svg`,
+									handler: async (paymentResponse) =>{
+
+                    try {
+
+                         const verification = await api.post("/api/billing/verify-subscription",{
+                      razorpay_payment_id:paymentResponse.razorpay_payment_id,
+                      razorpay_subscription_id:paymentResponse.razorpay_subscription_id,
+                      razorpay_signature: paymentResponse.razorpay_signature
+                    },
+                    {
+                     headers: {
+                    Authorization: `Bearer ${token}`,
+                    },
+
+                    }
+                  
+                  
+                  )
+
+                  if(verification.data.verified){
+                      toast.success("Payment signature verified!");
+                  }
+
+
+                      
+                    } catch (error) {
+                        toast.error(
+      error.response?.data?.message ||
+      "Payment verification failed."
+    );
+                    }
+                    finally{
+                      setLoading(false)
+                    }
+
+
+                   
+
+                 
+
+									},
+
+                  modal:{
+                    ondismiss:()=>{
+                      setLoading(false)
+                    }
+                  }
+							
+              });
+
+              checkout.on("payment.failed",(event)=>{
+                const message = event.error?.description || "Payment failed. Please try again."
+                  setError(message);
+                  toast.error(message);
+                 setLoading(false);
+              })
+
+								checkout.open();
+							
+							
+						
+
+
+    toast.success("Subscription created successfully!");
+      
+  
 
      
 
-     // Chaeck whether Razorpay Checkout is loaded
-
-     if(!window.Razorpay){
-      throw new Error("Razorpay Checkout not loaded")
-     }
-
-     const checkout = new window.Razorpay({
-      key :data.keyId,
-      subscription_id : data.subscriptionId,
-      name:"MeetFlow",
-      description :`Premium ${billingPeriod} subscription`,
-
    
-
-     handler:()=>{
-      toast.success("Subscription submitted. Confirming your status...")
-      setLoading(false);
-     },
-
-     modal:{
-      ondismiss:()=>{
-        setLoading(false)
-      }
-     }
-
-
-    });
-    checkout.on("payment.failed",(event)=>{
-      throw Error(
-        event.error?.description || "Payment failed. Please try again."
-      )
-       setLoading(false);
-    });
-
-    checkout.open();
-
 
 
   }
   catch(err){
-    setError(err.message || "Something went wrong.");
+    const message = err.response?.data?.message || err.message || "Something went wrong."
+    setError(message);
       setLoading(false);
+    
+      
+          toast.error("Something went wrong");
+  }
+   finally {
+    setLoading(false);
   }
 }
+
+
+
 
 
 
@@ -260,3 +317,15 @@ const Pricing = () => {
 }
 
 export default Pricing
+
+
+// billingRouter.post("/plans",createPlan)
+// billingRouter.get("/plans",fetchPlans)
+// billingRouter.get("/plans/:id",fetchPlanByID)
+
+// // Subscription Routes
+// billingRouter.post("/subscriptions",createSubscription)
+// billingRouter.get("/subscriptions",fetchSubscriptions)
+// billingRouter.get("/subscriptions/:id",fetchSubscriptionById)
+// billingRouter.post("/subscriptions/:id/cancel",cancelSubscription)
+// billingRouter.patch("/subscriptions/:id",updateSubscriptionById)

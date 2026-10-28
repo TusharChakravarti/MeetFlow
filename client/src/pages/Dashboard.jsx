@@ -154,7 +154,7 @@ const [stats,setStats] = useState(null);
 
 {/* Right Column - Hero Graphic & Clock Card */}
 <div className='lg:col-span-5 flex flex-col items-center justify-center space-y-4'>
-<div className='w-full bg-white/25 backdrop:blur rounded-4xl p-8 border border-slate-200 text-center space-y-6 relative overflow-hidden'>
+<div className='w-full bg-white/25 backdrop-blur rounded-4xl p-8 border border-slate-200 text-center space-y-6 relative overflow-hidden'>
 <div className="space-y-1">
   <p className='mb-5 text-xl text-left'>Hi, <span className='font-medium'>{userName}</span></p>
   <h2
