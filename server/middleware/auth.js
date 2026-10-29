@@ -22,8 +22,10 @@ export const protect =async(req,res,next)=>{
     SELECT id,name,plan
     FROM users 
     WHERE id = ${userId}
+
     `
 
+    
     if(users.length==0){
         return res.status(404).json({
         success: false,

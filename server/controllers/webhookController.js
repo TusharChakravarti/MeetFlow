@@ -15,8 +15,7 @@ try {
         const name = `${data.first_name || "User"} ${data.last_name || ""}`.trim();
          const image = data.image_url || ""
          const plan  =  "free"
-        
-
+   
          await sql`
          INSERT INTO users(id,name,email,image,plan)
          VALUES (${userId}, ${name}, ${primaryEmail} ,${image}, ${plan})

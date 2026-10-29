@@ -14,7 +14,16 @@ import billingRouter from "./routes/PricingRoutes.js";
  const app = express()
  const server = http.createServer(app)
  // Connect To Neon  & Initialize Tables
-await initDB()
+
+ try {
+    await initDB()
+ } catch (error) {
+    console.error(error);
+    res.status(500).json({
+        message:"Error connecting with db"
+    })
+ }
+
 
 
 
@@ -25,10 +34,10 @@ const allowedOrigins = process.env.ORIGINS.split(",")
 app.post("/api/clerk",express.raw({type:"application/json"}),handleClerkWebhook)
 app.post("/api/webhooks/razorpay",express.raw({type:"application/json"}), handleRazorpayWebhook)
 
-
- app.use(express.json())
  app.use(clerkMiddleware())
  
+ app.use(express.json())
+
 
  app.get("/",(req,res)=> res.send("API is Live!"))
  app.use("/api/meetings",meetingRouter)
