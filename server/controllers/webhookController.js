@@ -11,7 +11,7 @@ try {
     switch (eventType) {
         case "user.created":{
         const userId = data.id
-        const primaryEmail = data.email_addresses?.[0]?.email_address || ""
+        const primaryEmail = data.email_addresses?.find(e=> e.id === data.primary_email_address_id)?.email_address || ""
         const name = `${data.first_name || "User"} ${data.last_name || ""}`.trim();
          const image = data.image_url || ""
          const plan  =  "free"
