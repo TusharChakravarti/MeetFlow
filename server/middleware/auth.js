@@ -17,7 +17,7 @@ export const protect =async(req,res,next)=>{
     }
 
 
-    const users = await sql`
+    let users = await sql`
     SELECT id,name,plan
     FROM users 
     WHERE id = ${userId}
