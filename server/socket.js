@@ -11,7 +11,32 @@ io.on("connection",(socket)=>{
 
  // User joins a meeting Room
  socket.on("join-room",async ({roomId,user,audioEnabled = true,videoEnabled = true})=>{
+    // to avoid duplicate joining
   try {
+    if(currentRoomId && currentRoomId===roomId && rooms.get(roomId)?.has(socket.id)){
+         return;
+    }
+
+    if(currentRoomId && roomId!==currentRoomId){
+        const previousRoom = rooms.get(currentRoomId);
+        if(previousRoom){
+            previousRoom.delete(socket.id)
+            if(previousRoom.size === 0) {
+                rooms.delete(previousRoom)
+            }else{
+                io.to(currentRoomId).emit("user-left",{
+                    socketId:socket.id,
+                    user:currentUser
+                })
+            }
+        }
+
+        socket.leave(currentRoomId);
+        currentRoomId = null
+        currentUser = null;
+
+
+    }
     // verify meeting status from DB
     const meetings  = await sql `
     SELECT * FROM meetings WHERE meeting_id = ${roomId}
@@ -31,7 +56,7 @@ io.on("connection",(socket)=>{
         })
         return;
     }
-    currentRoomId = roomId;
+    
     const isHost = meeting.host_id && user?.id && meeting.host_id.toString() === user.id.toString()
     currentUser = {
         socketId:socket.id,
@@ -66,7 +91,7 @@ if(roomParticipants.size >= maxParticipants ){
     })
     return;
 }
-
+currentRoomId = roomId;
 socket.join(roomId)
 
 // Get existing participants in the room
@@ -268,7 +293,7 @@ socket.on("disconnect",()=>{
     }
     else{
         //Notify remaining peers that a user disconnected
-        socket.to(currentRoomId).emit("user-left",{
+        io.to(currentRoomId).emit("user-left",{
             socketId:socket.id,
             user:currentUser
         })

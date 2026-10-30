@@ -21,6 +21,14 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
   const peersRef = useRef(new Map()) // socketId -> RTCPeerConnection
   const localStreamRef = useRef(null)
 
+  const mediaRef = useRef({audioEnabled,videoEnabled})
+
+  const icecandidateQueue = useRef(new Map())
+
+  useEffect(()=>{
+  mediaRef.current = {audioEnabled,videoEnabled}
+  },[audioEnabled,videoEnabled])
+
   // Initialize local camera stream if available in browser
   const initLocalStream = useCallback(async ()=>{
   
@@ -57,6 +65,20 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
 
   },[])
 
+  const processCandidateQueue = async (senderSocketId,peer)=>{
+       const candidates = icecandidateQueue.current.get(senderSocketId)||[]
+
+       for(const candidate of candidates){
+        try {
+          await peer.addIceCandidate(candidate);
+        } catch (error) {
+          console.error("Error adding queued ICE candidate",error)
+        }
+       }
+
+       icecandidateQueue.current.delete(senderSocketId)
+  }
+
    // Create RTCPeerConnection for a target socket
    const createPeerConnection  = useCallback((targetSocketId,targetUser)=>{
     if(peersRef.current.has(targetSocketId)){
@@ -66,6 +88,17 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
 
        
       const peer = new RTCPeerConnection(ICE_SERVERS)
+
+      peer.onconnectionstatechange = ()=>{
+        const state = peer.connectionState;
+        console.log(`Peer ${targetSocketId} connection state:`,state)
+        if(state === "closed"|| state == "failed"){
+          peer.close()
+          peersRef.current.delete(targetSocketId)
+
+          setRemoteUsers(prev=> prev.filter((u)=>u.socketId!==targetSocketId))
+        }
+      }
        // Add local tracks to peer connection
       if(localStreamRef.current){
         localStreamRef.current.getTracks().forEach((track)=>{
@@ -108,9 +141,8 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
                   userId:targetUser?.id,
                   userName:targetUser?.userName || "Partcipant",
                   stream:remoteStream,
-                  audioEnabled:audioEnabled,
-                  videoEnabled:videoEnabled
-
+                 audioEnabled:mediaRef.current.audioEnabled,
+                 videoEnabled:mediaRef.current.videoEnabled
 
                 }
 
@@ -138,20 +170,10 @@ if(!roomId || !user ||!enabled) return;
 let isMounted = true;
 
 const startSession = async ()=>{
-  const stream = await initLocalStream()
-  if(!isMounted) return;
-  if(!socket.connected){
-    socket.connect()
-  }
-  // Emit join room
-  socket.emit("join-room",{
-    roomId,
-    user,
-    audioEnabled,
-    videoEnabled
-  })
 
-  // 1. Receive all existing users in room
+   // Register socket listeners
+
+    // 1. Receive all existing users in room
   socket.on("all-users",(existingUsers)=>{
     existingUsers.forEach((existingUser)=>{
       const peer = createPeerConnection(existingUser.socketId,existingUser)
@@ -182,6 +204,8 @@ const startSession = async ()=>{
            try {
             
            await peer.setRemoteDescription(new RTCSessionDescription(sdp))
+           await processCandidateQueue(callerSocketId,peer)
+
            const answer = await peer.createAnswer()
             await peer.setLocalDescription(answer)
 
@@ -208,6 +232,7 @@ const startSession = async ()=>{
               if(peer){
                 try {
                   await peer.setRemoteDescription(new RTCSessionDescription(sdp))
+                  await processCandidateQueue(responderSocketId,peer)
 
                 } catch (error) {
                    console.error("Error setting remote description from answer:", error);
@@ -218,19 +243,39 @@ const startSession = async ()=>{
             // 5. Receive ICE candidate
 
             socket.on("ice-candidate",async ({senderSocketId,candidate})=>{
-              const peer = peersRef.current.get(senderSocketId)
-            
-                  if(peer && candidate){
-                    try {
-                         await peer.addIceCandidate(new RTCIceCandidate(candidate))
-                      
-                    } catch (error) {
-                       console.error("Error adding ICE candidate:", error);
-                    }
+
+try {
+         const peer = peersRef.current.get(senderSocketId)
+              if(!peer) return;
+
+              const iceCandidate = new RTCIceCandidate(candidate)
+
            
+
+              if(peer.remoteDescription){
+                     
+                         await peer.addIceCandidate(iceCandidate)
+                      
+                   
+              }
+              else{
+                // Remote description isn't ready, so queue the candidate
+
+                if(!icecandidateQueue.current.has(senderSocketId)){
+                  icecandidateQueue.current.set(senderSocketId,[])
+                }
+
+                icecandidateQueue.current.get(senderSocketId).push(iceCandidate)
+
+              }
             
-                  }
+} catch (error) {
+     console.error("Error handling ICE candidate:", error);
+
+}
+
           
+              
             
               
 
@@ -266,6 +311,10 @@ const startSession = async ()=>{
                         peersRef.current.delete(socketId)
 
                   }
+                 // Clean up pending ICE candidate
+
+                 icecandidateQueue.current.delete(socketId)
+
                  setRemoteUsers((prev)=>prev.filter((u)=> u.socketId!==socketId))
                    
 
@@ -284,6 +333,34 @@ const startSession = async ()=>{
                     
                   
                      })
+
+
+
+
+  const stream = await initLocalStream()
+  if(!isMounted) return;
+
+
+  //Join only after connection
+const joinRoom = ()=>{
+  socket.emit("join-room",{
+    roomId,
+    user,
+    audioEnabled:mediaRef.current.audioEnabled,
+    videoEnabled:mediaRef.current.videoEnabled
+  })
+
+} 
+
+socket.on("connect",joinRoom);
+
+  if(!socket.connected){
+    socket.connect()
+  }
+  else{
+    joinRoom()
+  }
+
 
                     
 
@@ -305,6 +382,7 @@ const startSession = async ()=>{
     peersRef.current.clear()
 
        // Off socket listeners
+       socket.off("connect",joinRoom)
    socket.off("all-users")
    socket.off("user-joined")
    socket.off("offer")
@@ -316,6 +394,7 @@ const startSession = async ()=>{
   socket.off("meeting-ended");
 
   socket.disconnect()
+  icecandidateQueue.current.clear()
 
   }
 
