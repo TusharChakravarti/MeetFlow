@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { dummyRemoteParticipants } from '../assets/asset'
-import { socket } from '../config/socket';
+
 import toast from 'react-hot-toast';
 
 
@@ -24,6 +24,7 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
   const mediaRef = useRef({audioEnabled,videoEnabled})
 
   const icecandidateQueue = useRef(new Map())
+  const processingCandidates = useRef(new Set())
 
   useEffect(()=>{
   mediaRef.current = {audioEnabled,videoEnabled}
@@ -66,17 +67,31 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
   },[])
 
   const processCandidateQueue = async (senderSocketId,peer)=>{
-       const candidates = icecandidateQueue.current.get(senderSocketId)||[]
+    if (processingCandidates.current.has(senderSocketId)) return;
+    processingCandidates.current.add(senderSocketId)
+    try{
+         while(icecandidateQueue.current.has(senderSocketId)){
+  const candidates = icecandidateQueue.current.get(senderSocketId)||[]
+           // Remove this batch before processing it
+          icecandidateQueue.current.delete(senderSocketId)
 
-       for(const candidate of candidates){
-        try {
+        candidates.forEach(async (candidate)=>{
+            try {
           await peer.addIceCandidate(candidate);
         } catch (error) {
           console.error("Error adding queued ICE candidate",error)
         }
-       }
+        })
+      
+    }
+    }
+    finally{
+      processingCandidates.current.delete(senderSocketId)
+    }
 
-       icecandidateQueue.current.delete(senderSocketId)
+     
+
+     
   }
 
    // Create RTCPeerConnection for a target socket
@@ -94,9 +109,12 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
         console.log(`Peer ${targetSocketId} connection state:`,state)
         if(state === "closed"|| state == "failed"){
           peer.close()
+          if(peersRef.current.get(targetSocketId)===peer){
           peersRef.current.delete(targetSocketId)
 
           setRemoteUsers(prev=> prev.filter((u)=>u.socketId!==targetSocketId))
+          }
+
         }
       }
        // Add local tracks to peer connection
@@ -141,8 +159,8 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
                   userId:targetUser?.id,
                   userName:targetUser?.userName || "Partcipant",
                   stream:remoteStream,
-                 audioEnabled:mediaRef.current.audioEnabled,
-                 videoEnabled:mediaRef.current.videoEnabled
+                 audioEnabled:targetUser?.audioEnabled ?? true,
+                 videoEnabled:targetUser?.videoEnabled ?? true
 
                 }
 
@@ -169,13 +187,20 @@ if(!roomId || !user ||!enabled) return;
 
 let isMounted = true;
 
-const startSession = async ()=>{
+  //Join only after connection
+const joinRoom = ()=>{
+  socket.emit("join-room",{
+    roomId,
+    user,
+    audioEnabled:mediaRef.current.audioEnabled,
+    videoEnabled:mediaRef.current.videoEnabled
+  })
 
-   // Register socket listeners
+} 
 
-    // 1. Receive all existing users in room
-  socket.on("all-users",(existingUsers)=>{
-    existingUsers.forEach((existingUser)=>{
+const handleAllUsers = (existingUsers)=>{
+ existingUsers.forEach((existingUser)=>{
+    if (!isMounted) return;
       const peer = createPeerConnection(existingUser.socketId,existingUser)
       // Create offer to existing user
       peer.createOffer()
@@ -190,25 +215,26 @@ const startSession = async ()=>{
       })
       .catch((err) => console.error("Error creating offer:", err))
     })
-  })
-     // 2. Someone new joined -> add to state
-     socket.on("user-joined",(newUser)=>{
-      toast(`${newUser.userName} joined the meeting` , { icon: "👋" })
+}
+
+const handleUserJoined = (newUser)=>{
+  toast(`${newUser.userName} joined the meeting` , { icon: "👋" })
       createPeerConnection(newUser.socketId,newUser)
-     })
+}
 
-         // 3. Receive offer from caller
-
-         socket.on("offer",async ({callerSocketId, sdp,callerUser})=>{
-           const peer = createPeerConnection(callerSocketId,callerUser)
+const handleOffer = async ({callerSocketId, sdp,callerUser})=>{
+ const peer = createPeerConnection(callerSocketId,callerUser)
            try {
             
            await peer.setRemoteDescription(new RTCSessionDescription(sdp))
+               if (!isMounted) return;
            await processCandidateQueue(callerSocketId,peer)
+               if (!isMounted) return;
 
            const answer = await peer.createAnswer()
+               if (!isMounted) return;
             await peer.setLocalDescription(answer)
-
+                 if (!isMounted) return;
             socket.emit("answer",{
             
               targetSocketId:callerSocketId,
@@ -222,52 +248,48 @@ const startSession = async ()=>{
            }
 
 
+}
 
-          
-         })
-
-         // 4. Receive answer from responder
-         socket.on("answer",async ({responderSocketId,sdp})=>{
+const handleAnswer = async ({responderSocketId,sdp})=>{
               const peer = peersRef.current.get(responderSocketId);
               if(peer){
                 try {
                   await peer.setRemoteDescription(new RTCSessionDescription(sdp))
+                      if (!isMounted) return;
                   await processCandidateQueue(responderSocketId,peer)
 
                 } catch (error) {
                    console.error("Error setting remote description from answer:", error);
                 }
               }
-         })
+         }
 
-            // 5. Receive ICE candidate
 
-            socket.on("ice-candidate",async ({senderSocketId,candidate})=>{
 
-try {
-         const peer = peersRef.current.get(senderSocketId)
-              if(!peer) return;
+      const handleIceCandidate = async ({senderSocketId,candidate})=>{
 
-              const iceCandidate = new RTCIceCandidate(candidate)
-
-           
-
-              if(peer.remoteDescription){
-                     
-                         await peer.addIceCandidate(iceCandidate)
-                      
-                   
-              }
-              else{
-                // Remote description isn't ready, so queue the candidate
-
+            try {
+               const peer = peersRef.current.get(senderSocketId)
+                const iceCandidate = new RTCIceCandidate(candidate)
+                 // Peer doesn't exist OR remote description isn't ready
+              if(!peer||!peer.remoteDescription||processingCandidates.current.has(senderSocketId)){
                 if(!icecandidateQueue.current.has(senderSocketId)){
                   icecandidateQueue.current.set(senderSocketId,[])
                 }
-
                 icecandidateQueue.current.get(senderSocketId).push(iceCandidate)
-
+                return;
               }
+
+             
+
+           
+
+                     
+                         await peer.addIceCandidate(iceCandidate)
+                      
+                  
+              
+     
             
 } catch (error) {
      console.error("Error handling ICE candidate:", error);
@@ -279,28 +301,23 @@ try {
             
               
 
-            })
+            }
 
-              // 6. Handle peer audio toggle
-
-              socket.on("user-toggled-audio",({socketId,audioEnabled})=>{
+            const handleUserAudioToggle = ({socketId,audioEnabled})=>{
                 setRemoteUsers((prev)=>prev.map(
                   (u)=> u.socketId == socketId ? {...u,audioEnabled}:u
                 ))
 
-              })
+              }
 
-                // 7. Handle peer video toggle
-               socket.on("user-toggled-video",({socketId,videoEnabled})=>{
+              const handleUserVideoToggle = ({socketId,videoEnabled})=>{
                 setRemoteUsers((prev)=>prev.map(
                   (u)=> u.socketId == socketId ? {...u,videoEnabled}:u
                 ))
 
-              })
+              }
 
-                // 8. Handle peer left
-
-                socket.on("user-left",({socketId,user: leftUser})=>{
+              const handleUserLeft = ({socketId,user: leftUser})=>{
                   if(leftUser){
                     toast(`${leftUser.userName} left the meeting`)
                   }
@@ -321,36 +338,70 @@ try {
               
                
                  
-                })
+                }
 
-                     // 9. Handle meeting ended by host
-
-                     socket.on("meeting-ended",({message})=>{
+                const handleMeetingEnded = ({message})=>{
                       toast.error(message||"This meeting has ended")
                       if(onMeetingEnded){
                     onMeetingEnded(message)
                       }
                     
                   
-                     })
+                     }
+
+const startSession = async ()=>{
+
+
+
+   // Register socket listeners
+
+    // 1. Receive all existing users in room
+  socket.on("all-users",handleAllUsers)
+     // 2. Someone new joined -> add to state
+     socket.on("user-joined",handleUserJoined)
+
+         // 3. Receive offer from caller
+
+         socket.on("offer",handleOffer)
+
+         // 4. Receive answer from responder
+         socket.on("answer",handleAnswer)
+
+            // 5. Receive ICE candidate
+
+            socket.on("ice-candidate",handleIceCandidate)
+
+              // 6. Handle peer audio toggle
+
+              socket.on("user-toggled-audio",handleUserAudioToggle)
+
+                // 7. Handle peer video toggle
+               socket.on("user-toggled-video",handleUserVideoToggle)
+
+                // 8. Handle peer left
+
+                socket.on("user-left",handleUserLeft)
+
+                     // 9. Handle meeting ended by host
+
+                  socket.on("meeting-ended",handleMeetingEnded)
 
 
 
 
   const stream = await initLocalStream()
-  if(!isMounted) return;
+  if(!isMounted){
+    if(stream){
+      stream.getTracks().forEach((track)=> track.stop());
+    }
+   if(localStreamRef.current === stream){
+    localStreamRef.current = null
+   }
+
+    return;
+  }
 
 
-  //Join only after connection
-const joinRoom = ()=>{
-  socket.emit("join-room",{
-    roomId,
-    user,
-    audioEnabled:mediaRef.current.audioEnabled,
-    videoEnabled:mediaRef.current.videoEnabled
-  })
-
-} 
 
 socket.on("connect",joinRoom);
 
@@ -368,6 +419,9 @@ socket.on("connect",joinRoom);
 
   startSession();
 
+  
+
+
          // Cleanup on leave/unmount
 
   return ()=>{
@@ -383,18 +437,19 @@ socket.on("connect",joinRoom);
 
        // Off socket listeners
        socket.off("connect",joinRoom)
-   socket.off("all-users")
-   socket.off("user-joined")
-   socket.off("offer")
-   socket.off("answer")
-  socket.off("ice-candidate")
-  socket.off("user-toggled-audio")
-  socket.off("user-toggled-video");
-  socket.off("user-left");
-  socket.off("meeting-ended");
+   socket.off("all-users",handleAllUsers)
+   socket.off("user-joined",handleUserJoined)
+   socket.off("offer",handleOffer)
+   socket.off("answer",handleAnswer)
+  socket.off("ice-candidate",handleIceCandidate)
+  socket.off("user-toggled-audio",handleUserAudioToggle)
+  socket.off("user-toggled-video",handleUserVideoToggle);
+  socket.off("user-left",handleUserLeft);
+  socket.off("meeting-ended",handleMeetingEnded);
 
-  socket.disconnect()
+ 
   icecandidateQueue.current.clear()
+  processingCandidates.current.clear();
 
   }
 
@@ -428,7 +483,7 @@ socket.on("connect",joinRoom);
  }
  // Toggle local camera
   const toggleVideo = ()=>{
-
+     if(!localStreamRef.current) return;
     const videoTrack = localStreamRef.current.getVideoTracks()[0]
     if(videoTrack){
       const newState = !videoEnabled
