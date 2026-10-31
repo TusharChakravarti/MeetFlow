@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { dummyRemoteParticipants } from '../assets/asset'
+
 
 import toast from 'react-hot-toast';
 
@@ -75,13 +75,13 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
            // Remove this batch before processing it
           icecandidateQueue.current.delete(senderSocketId)
 
-        candidates.forEach(async (candidate)=>{
-            try {
-          await peer.addIceCandidate(candidate);
-        } catch (error) {
-          console.error("Error adding queued ICE candidate",error)
-        }
-        })
+     for (const candidate of candidates) {
+  try {
+    await peer.addIceCandidate(candidate);
+  } catch (error) {
+    console.error("Error adding queued ICE candidate", error);
+  }
+}
       
     }
     }
@@ -198,23 +198,30 @@ const joinRoom = ()=>{
 
 } 
 
-const handleAllUsers = (existingUsers)=>{
- existingUsers.forEach((existingUser)=>{
-    if (!isMounted) return;
-      const peer = createPeerConnection(existingUser.socketId,existingUser)
-      // Create offer to existing user
-      peer.createOffer()
-      .then((offer)=> peer.setLocalDescription(offer)
-      )
-      .then(()=>{
-        socket.emit("offer",{
-          targetSocketId:existingUser.socketId,
-          callerSocketId:socket.id,
-          sdp:peer.localDescription
-        })
-      })
-      .catch((err) => console.error("Error creating offer:", err))
-    })
+const handleAllUsers = async(existingUsers)=>{
+ for(const existingUser of existingUsers){
+  if(!isMounted) return;
+  const peer = peer.createPeerConnection(
+    existingUser.socketId,
+    existingUser
+  )
+
+  try {
+    const offer  = await peer.createOffer()
+          if (!isMounted) return;
+          peer.setLocalDescription(offer)
+               if (!isMounted) return;
+
+               socket.emit("offer",{
+                targetSocketId:existingUser.socketId,
+                callerSocketId:socket.id,
+                sdp:peer.localDescription
+               })
+
+  } catch (error) {
+     console.error("Error creating offer:", error);
+  }
+ }
 }
 
 const handleUserJoined = (newUser)=>{
@@ -450,6 +457,11 @@ socket.on("connect",joinRoom);
  
   icecandidateQueue.current.clear()
   processingCandidates.current.clear();
+
+  if(localStreamRef.current){
+    localStreamRef.current.getTracks().forEach(track=>track.stop())
+    localStreamRef.current = null;
+  }
 
   }
 
