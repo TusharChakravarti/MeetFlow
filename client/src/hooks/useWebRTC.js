@@ -453,6 +453,9 @@ socket.on("connect",joinRoom);
 
    socket.emit("leave-room")
  
+
+   setRemoteUsers([])
+   
   icecandidateQueue.current.clear()
   processingCandidates.current.clear();
 // Stop local tracks
