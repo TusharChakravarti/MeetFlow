@@ -201,7 +201,7 @@ const joinRoom = ()=>{
 const handleAllUsers = async(existingUsers)=>{
  for(const existingUser of existingUsers){
   if(!isMounted) return;
-  const peer = peer.createPeerConnection(
+  const peer = createPeerConnection(
     existingUser.socketId,
     existingUser
   )
@@ -209,7 +209,7 @@ const handleAllUsers = async(existingUsers)=>{
   try {
     const offer  = await peer.createOffer()
           if (!isMounted) return;
-          peer.setLocalDescription(offer)
+          await peer.setLocalDescription(offer)
                if (!isMounted) return;
 
                socket.emit("offer",{
@@ -433,10 +433,8 @@ socket.on("connect",joinRoom);
 
   return ()=>{
     isMounted = false
-          // Stop local tracks
-    if(localStreamRef.current){
-       localStreamRef.current.getTracks().forEach((track)=> track.stop())
-    }
+          
+ 
 
      // Close all peer connections
     peersRef.current.forEach((peer)=>peer.close())
@@ -457,7 +455,7 @@ socket.on("connect",joinRoom);
  
   icecandidateQueue.current.clear()
   processingCandidates.current.clear();
-
+// Stop local tracks
   if(localStreamRef.current){
     localStreamRef.current.getTracks().forEach(track=>track.stop())
     localStreamRef.current = null;
