@@ -9,6 +9,31 @@ io.on("connection",(socket)=>{
  let currentRoomId = null
  let currentUser = null
 
+ const leaveCurrentRoom = ()=>{
+    if(!currentRoomId) return;
+    const roomId = currentRoomId
+    const roomParticipants = rooms.get(roomId)
+
+    if(roomParticipants){
+        roomParticipants.delete(socket.id)
+        if(roomParticipants.size === 0){
+            rooms.delete(roomId)
+        }
+        else{
+            socket.to(roomId).emit("user-left",{
+                socketId:socket.id,
+                user:currentUser
+            })
+        }
+     
+    }
+   socket.leave(roomId)
+        currentRoomId = null;
+        currentUser = null;
+
+
+}
+
  // User joins a meeting Room
  socket.on("join-room",async ({roomId,user,audioEnabled = true,videoEnabled = true})=>{
     // to avoid duplicate joining
@@ -18,25 +43,10 @@ io.on("connection",(socket)=>{
     }
 
     if(currentRoomId && roomId!==currentRoomId){
-        const previousRoom = rooms.get(currentRoomId);
-        if(previousRoom){
-            previousRoom.delete(socket.id)
-            if(previousRoom.size === 0) {
-                rooms.delete(previousRoom)
-            }else{
-                io.to(currentRoomId).emit("user-left",{
-                    socketId:socket.id,
-                    user:currentUser
-                })
-            }
-        }
-
-        socket.leave(currentRoomId);
-        currentRoomId = null
-        currentUser = null;
-
+        leaveCurrentRoom()
 
     }
+
     // verify meeting status from DB
     const meetings  = await sql `
     SELECT * FROM meetings WHERE meeting_id = ${roomId}
@@ -282,26 +292,18 @@ socket.on("end-meeting",async ({roomId})=>{
 
 })
 
+// Leave room
+
+socket.on("leave-room",()=>{
+    leaveCurrentRoom()
+})
+
 // Handle Disconnect (Reloading window,network drop or closing tab)
 
 socket.on("disconnect",()=>{
-  if(currentRoomId && rooms.has(currentRoomId)){
-    const roomParticipants = rooms.get(currentRoomId)
-    roomParticipants.delete(socket.id)
-    if(roomParticipants.size===0){
-        rooms.delete(currentRoomId)
-    }
-    else{
-        //Notify remaining peers that a user disconnected
-        io.to(currentRoomId).emit("user-left",{
-            socketId:socket.id,
-            user:currentUser
-        })
-
-    }  
-  }
-
-})
+    leaveCurrentRoom()
+}
+)
 
 
 })

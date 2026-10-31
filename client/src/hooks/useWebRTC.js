@@ -451,6 +451,7 @@ socket.on("connect",joinRoom);
   socket.off("user-left",handleUserLeft);
   socket.off("meeting-ended",handleMeetingEnded);
 
+   socket.emit("leave-room")
  
   icecandidateQueue.current.clear()
   processingCandidates.current.clear();
