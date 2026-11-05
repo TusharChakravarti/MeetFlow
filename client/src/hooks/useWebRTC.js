@@ -330,11 +330,12 @@ peersRef.current.forEach((peer)=>{
     const screenTrack = stream.getVideoTracks()[0];
 
     peersRef.current.forEach((peer)=>{
-      peer.getSenders.find((sender)=>sender.track === screenTrack)
-    })
-   if(sender){
+     const sender  = peer.getSenders().find((sender)=>sender.track === screenTrack)
+       if(sender){
     peer.removeTrack(sender)
    }
+    })
+ 
 
    }
 
