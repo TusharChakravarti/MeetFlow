@@ -286,10 +286,10 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
 
    }
 const handleScreenShareEnded = ()=>{
-  startScreenShare();
+ stopScreenShare();
 }
    const startScreenShare = async()=>{
-
+if(captureStreamRef.current) return;
  const stream = await initScreenShare()
  if(!stream){
   return;
