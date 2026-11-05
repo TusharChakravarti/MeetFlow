@@ -1,7 +1,18 @@
-import { CheckIcon, CopyIcon, MessageSquareIcon, MicIcon, MicOffIcon, PhoneCallIcon, PhoneOffIcon, UserIcon, VideoIcon, VideoOffIcon } from 'lucide-react'
+import {  CheckIcon,
+  CopyIcon,
+  MessageSquareIcon,
+  MicIcon,
+  MicOffIcon,
+  PhoneCallIcon,
+  PhoneOffIcon,
+  UserIcon,
+  VideoIcon,
+  VideoOffIcon,
+  MonitorUp,
+  MonitorStop} from 'lucide-react'
 import React, { useState } from 'react'
 import toast from 'react-hot-toast'
-const ControlBar = ({roomId,audioEnabled,VideoEnabled,OnToggleAudio,OnToggleVideo,onToggleChat,onToggleParticipants, isChatOpen,isParticipantOpen,unreadCount ,participantCount,isHost,onLeave,onEndMeeting}) => {
+const ControlBar = ({roomId,audioEnabled,VideoEnabled,OnToggleAudio,OnToggleVideo,onToggleChat,onToggleParticipants, isChatOpen,isParticipantOpen,unreadCount ,participantCount,isHost,onLeave,onEndMeeting,screenRecording,onStartScreenShare,onStopScreenShare}) => {
     const [copied,setCopied] = useState(false)
 
     const copyMeetingId = async ()=>{
@@ -82,6 +93,19 @@ const ControlBar = ({roomId,audioEnabled,VideoEnabled,OnToggleAudio,OnToggleVide
                    
                     </button>
 
+                    {/* Screen Share Toggle */}
+                    <button
+                    onClick={screenRecording?onStopScreenShare:onStartScreenShare}
+                      className={`p-3.5 rounded-2xl transition-all cursor-pointer border ${
+                     screenRecording
+                      ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200"
+                      : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300"}`}
+                      title={screenRecording?"Stop Sharing" : "Share Screen"}
+                      >
+                         {screenRecording
+                        ? <MonitorStop className='w-5 h-5' />
+                        : <MonitorUp className='w-5 h-5' />}
+                    </button>
                   
                    {/* Leave / End Meeting Button */}
                   {isHost ? (

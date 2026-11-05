@@ -1,14 +1,15 @@
 import React from 'react'
 import VideoTile from './VideoTile'
 
-const VideoGrid = ({localStream,localUser,remoteUsers,audioEnabled,videoEnabled}) => {
-    const totalParticipants = 1+remoteUsers.length
+const VideoGrid = ({localStream,captureStream,localUser,remoteUsers,audioEnabled,videoEnabled}) => {
+    const totalTiles = 1+remoteUsers.length+(captureStream.length)+
+    (remoteUsers.some((r)=>r.screenStream)?1:0)
     // Determine grid column dynamically
     const getGridClass = ()=>{
-        if(totalParticipants===1) return "grid-cols-1 max-w-4xl"
-        if(totalParticipants===2) return "grid-cols-1 md:grid-cols-2 max-w-5xl"
-         if(totalParticipants<=4) return "grid-cols-1 md:grid-cols-2 max-w-5xl"
-          if(totalParticipants<=6) return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-7xl"
+        if(totalTiles===1) return "grid-cols-1 max-w-4xl"
+        if(totalTiles===2) return "grid-cols-1 md:grid-cols-2 max-w-5xl"
+         if(totalTiles<=4) return "grid-cols-1 md:grid-cols-2 max-w-5xl"
+          if(totalTiles<=6) return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-7xl"
 
           return "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 max-w-7xl"
 
@@ -26,11 +27,28 @@ const VideoGrid = ({localStream,localUser,remoteUsers,audioEnabled,videoEnabled}
 
            />
 
+           {/* Local Screen Share */}
+          {
+            captureStream && (
+              <VideoTile
+              stream={captureStream}
+              name = {localUser?.name||"You"}
+              isLocal = {true}
+              isScreenShare = {true}
+
+              />
+            )
+          }
+
+          
+
+
            {/* Remote User Tiles */}
 
            {remoteUsers.map((remote)=>(
-             <VideoTile
-              key = {remote.socketId}
+            <React.Fragment key={remote.socketId}>
+              <VideoTile
+           
               stream={remote.stream}
               name = {remote.userName}
               isLocal = {false}
@@ -38,6 +56,21 @@ const VideoGrid = ({localStream,localUser,remoteUsers,audioEnabled,videoEnabled}
             videoEnabled =   {remote.videoEnabled}
 
              />
+                      <VideoTile
+            
+              stream={remote.screenStream}
+              name = {remote.userName}
+              isLocal = {false}
+             isScreenShare = {true}
+
+             />
+
+             <VideoTile
+             />
+
+     
+            </React.Fragment>
+           
            ))}
 
 

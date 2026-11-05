@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {socket} from "../config/socket"
 import toast from 'react-hot-toast';
+import { types } from 'node:ffi';
 
 
 const ICE_SERVERS = {
@@ -16,11 +17,17 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
   const [remoteUsers,setRemoteUsers] = useState([]) // Array of { socketId, userId, userName, stream, audioEnabled, videoEnabled }
   const [audioEnabled,setAudioEnabled] = useState(true)
   const [videoEnabled,setVideoEnabled] = useState(true)
+  const [captureStream,setCaptureStream] = useState(null)
+  const [screenRecording,setScreenRecording] = useState(false)
+  
 
-  const peersRef = useRef(new Map()) // socketId -> RTCPeerConnection
+  const peersRef = useRef(new Map()) // socketId -> RTCPeerConnection of remote participants
   const localStreamRef = useRef(null)
+  const captureStreamRef = useRef(null)
 
   const mediaRef = useRef({audioEnabled,videoEnabled})
+
+  
 
   const icecandidateQueue = useRef(new Map())
   const processingCandidates = useRef(new Set())
@@ -123,6 +130,29 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
         })
       }
 
+       peer.onnegotiationneeded = async ()=>{
+        try {
+          peer.makingOffer = true;
+    const offer = await peer.createOffer()
+    await peer.setLocalDescription(offer)
+    socket.emit("offer",{
+      targetSocketId,
+      callerSocketId:socket.id,
+      sdp:peer.localDescription,
+      screenStreamId:captureStreamRef.current?.id ?? null
+    })
+        } catch (error) {
+            console.error("Error during negotiation:", error);
+        }
+        finally{
+          peer.polite = socket.id>targetSocketId
+          peer.ignoreOffer = false
+          peer.makingOffer = false
+
+        }
+
+  }
+
          // Handle ICE candidates
 
          peer.onicecandidate = (event)=>{
@@ -139,25 +169,46 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
 
            peer.ontrack = (event)=>{
             const remoteStream = event.streams[0]
+            if(!remoteStream) return;
+             // Identify whether this is the screen or camera stream
+             const isScreenShare = remoteStream.id === peer.remoteScreenStreamId
             setRemoteUsers((prev)=> {
-             const existingIndex = prev.findIndex((u)=> u.socketId === targetSocketId)
+              // if a new presenter starts , remove the previous screen form UI
+              
+              
+              const updatedUsers = isScreenShare ? prev.map((user)=>({
+                ...user,
+                screenStream:null
+              })):[...prev]
+
+             const existingIndex = updatedUsers.findIndex((u)=> u.socketId === targetSocketId)
              
              if(existingIndex>-1){
-              const updated  = [...prev]
+              const updated  = [...updatedUsers]
               updated[existingIndex] = {
                 ...updated[existingIndex],
-                 stream:remoteStream
+                ...(isScreenShare
+                  ?{
+                      screenStream:remoteStream
+                  }:{
+                     cameraStream:remoteStream,
+                     stream:remoteStream
+                  }
+                )
+               
               }
               return updated
              }
              else{
               return [
-                ...prev,
+                ...updatedUsers,
                 {
                   socketId:targetSocketId,
                   userId:targetUser?.id,
                   userName:targetUser?.userName || "Partcipant",
-                  stream:remoteStream,
+                  cameraStream: isScreenShare?null:remoteStream,
+                  screenStream:isScreenShare?remoteStream:null,
+                  stream:isScreenShare?null:remoteStream,
                  audioEnabled:targetUser?.audioEnabled ?? true,
                  videoEnabled:targetUser?.videoEnabled ?? true
 
@@ -167,6 +218,15 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
              }
 
            })
+
+           if(isScreenShare){
+            event.track.onended = ()=>{
+              setRemoteUsers((prev)=> prev.map((user)=>(
+                user.socketId === targetSocketId && user.screenStream === remoteStream
+                ?{...user,screenStream:null}:user
+              )))
+            }
+           }
           
               
            }
@@ -177,6 +237,109 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
  return peer
 
    },[])
+
+
+   const initScreenShare  = async()=>{
+
+
+  try {
+      if(!navigator.mediaDevices?.getDisplayMedia){
+    toast.error("Screen sharing is not supported by this browser")
+    return null;
+  }
+
+       const stream = await navigator.mediaDevices.getDisplayMedia({
+    video:{
+      displaySurface:"browser",
+    },
+    audio:{
+        suppressLocalAudioPlayback:false,
+    },
+    selfBrowserSurface:"exclude",
+    systemAudio:"exclude",
+    surfaceSwitching:"include",
+    monitorTypeSurfaces:"include"
+
+
+    
+   })
+        captureStreamRef.current = stream
+        setCaptureStream(stream)
+        setScreenRecording(true)
+         return stream;
+  } catch (error) {
+           console.error("Error starting screen share:", error);
+              if (error.name !== "NotAllowedError") {
+      toast.error("Unable to start screen sharing");
+    }
+    return null
+  }
+
+
+
+  
+      
+   
+
+
+
+
+   }
+const handleScreenShareEnded = ()=>{
+  startScreenShare();
+}
+   const startScreenShare = async()=>{
+
+ const stream = await initScreenShare()
+ if(!stream){
+  return;
+ }
+ 
+const screenTrack = stream.getVideoTracks()[0]
+
+if(!screenTrack){
+  stream.getTracks().forEach((track)=>track.stop())
+  captureStreamRef.current = null
+  setCaptureStream(null)
+  setScreenRecording(false)
+  return;
+}
+
+peersRef.current.forEach((peer)=>{
+  if(peer.signalingState !== "closed"){
+  peer.addTrack(screenTrack,stream)
+
+  }
+  screenTrack.onended = ()=>{
+    handleScreenShareEnded()
+  }
+
+ 
+  
+})
+
+
+
+
+
+   }
+   const stopScreenShare = ()=>{
+    const stream = captureStreamRef.current
+    if(!stream) return;
+
+    const screenTrack = stream.getVideoTracks()[0];
+
+    peersRef.current.forEach((peer)=>{
+      peer.getSenders.find((sender)=>sender.track === screenTrack)
+    })
+   if(sender){
+    peer.removeTrack(sender)
+   }
+
+   }
+
+
+
 
    // Main WebRTC & Socket signaling setup effect
 
@@ -228,10 +391,23 @@ const handleUserJoined = (newUser)=>{
       createPeerConnection(newUser.socketId,newUser)
 }
 
-const handleOffer = async ({callerSocketId, sdp,callerUser})=>{
+const handleOffer = async ({callerSocketId, sdp,callerUser,screenStreamId})=>{
+
  const peer = createPeerConnection(callerSocketId,callerUser)
+
+ const offerCollition = peer.signalingState !=="stable" || peer.makingOffer
+
+ peer.ignoreOffer = !peer.polite && offerCollition
+
+ if(peer.ignoreOffer){
+
+  return;
+ }
+
            try {
-            
+             if(offerCollition && peer.signalingState === "have-local-offer") await peer.setLocalDescription({type:"rollback"})
+
+            peer.remoteScreenStreamId = screenStreamId  
            await peer.setRemoteDescription(new RTCSessionDescription(sdp))
                if (!isMounted) return;
            await processCandidateQueue(callerSocketId,peer)
@@ -276,6 +452,7 @@ const handleAnswer = async ({responderSocketId,sdp})=>{
 
             try {
                const peer = peersRef.current.get(senderSocketId)
+               if(peer?.ignoreOffer) return;
                 const iceCandidate = new RTCIceCandidate(candidate)
                  // Peer doesn't exist OR remote description isn't ready
               if(!peer||!peer.remoteDescription||processingCandidates.current.has(senderSocketId)){
@@ -526,12 +703,17 @@ if(roomId){
 
 return{
   localStream,
+  captureStream,
   remoteUsers,
   audioEnabled,
   videoEnabled,
   toggleAudio,
   toggleVideo,
-  endMeeting
+  endMeeting,
+  screenRecording,
+  startScreenShare,
+  stopScreenShare,
+  
 }
 
 }

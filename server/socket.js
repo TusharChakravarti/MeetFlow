@@ -175,11 +175,12 @@ socket.to(roomId).emit("user-joined",currentUser)
 
  // send the information needed to start the connection
 
- socket.on("offer",({targetSocketId,callerSocketId,sdp})=>{
+ socket.on("offer",({targetSocketId,callerSocketId,sdp,screenStreamId})=>{
     io.to(targetSocketId).emit("offer",{
         callerSocketId,
         sdp,
-        callerUser:currentUser
+        callerUser:currentUser,
+        screenStreamId
     })
  
  })

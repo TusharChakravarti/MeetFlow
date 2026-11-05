@@ -47,7 +47,7 @@ return {
 
   // Initialize WebRTC
 
-  const {localStream,remoteUsers,audioEnabled,videoEnabled,toggleAudio,toggleVideo,endMeeting} = useWebRTC(meetingId,userData,handleMeetingEnded)
+  const {localStream,captureStream,screenRecording,startScreenShare,stopScreenShare,remoteUsers,audioEnabled,videoEnabled,toggleAudio,toggleVideo,endMeeting} = useWebRTC(meetingId,userData,handleMeetingEnded)
 
   // Initialize Chat
 
@@ -132,6 +132,7 @@ return {
         {/* Video Grid Center */}
         <VideoGrid 
         localStream={localStream}
+        captureStream = {captureStream}
         localUser={userData}
         remoteUsers={remoteUsers}
         audioEnabled={audioEnabled}
@@ -186,6 +187,10 @@ return {
         isHost = {isHost}
         onLeave = {handleLeave}
         onEndMeeting = {handleEndMeeting}
+        screenRecording={screenRecording}
+        onStartScreenShare={startScreenShare}
+        onStopScreenShare={stopScreenShare}
+       
 
         />
   
