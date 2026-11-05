@@ -2,7 +2,7 @@ import React from 'react'
 import VideoTile from './VideoTile'
 
 const VideoGrid = ({localStream,captureStream,localUser,remoteUsers,audioEnabled,videoEnabled}) => {
-    const totalTiles = 1+remoteUsers.length+(captureStream.length)+
+    const totalTiles = 1+remoteUsers.length+(captureStream)+
     (remoteUsers.some((r)=>r.screenStream)?1:0)
     // Determine grid column dynamically
     const getGridClass = ()=>{
@@ -15,7 +15,7 @@ const VideoGrid = ({localStream,captureStream,localUser,remoteUsers,audioEnabled
 
     }
   return (
-    <div className='flex-1 w-full flex  items items-cneter justify-center p-4 overflow-y-auto '>
+    <div className='flex-1 w-full flex  items items-center justify-center p-4 overflow-y-auto '>
      <div className={`w-full grid gap-4 ${getGridClass()} aspect-video max-h-[calc(100vh-140px)] transition-all duration-300`}>
           {/* Local User Tile */}
           <VideoTile 
