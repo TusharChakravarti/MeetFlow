@@ -335,6 +335,14 @@ peersRef.current.forEach((peer)=>{
     peer.removeTrack(sender)
    }
     })
+
+    stream.getTracks().forEach((track)=>track.stop())
+
+  captureStreamRef.current = null;
+  setCaptureStream(null)
+  setScreenRecording(false)
+
+
  
 
    }
