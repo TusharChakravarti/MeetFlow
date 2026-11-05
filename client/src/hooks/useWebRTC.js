@@ -289,7 +289,7 @@ const handleScreenShareEnded = ()=>{
  stopScreenShare();
 }
    const startScreenShare = async()=>{
-if(captureStreamRef.current) return;
+
  const stream = await initScreenShare()
  if(!stream){
   return;
