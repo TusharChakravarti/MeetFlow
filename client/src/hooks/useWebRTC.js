@@ -141,9 +141,12 @@ const {getToken,isLoaded,isSignedIn} = useAuth()
       }
 
        peer.onnegotiationneeded = async ()=>{
+        if(peer.signalingState !== "stable" || peer.makingOffer) return;
         try {
           peer.makingOffer = true;
     const offer = await peer.createOffer()
+       // The other participant may have sent an offer while we awaited createOffer()
+    if (peer.signalingState !== "stable") return;
     await peer.setLocalDescription(offer)
     socket.emit("offer",{
       targetSocketId,

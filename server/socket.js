@@ -131,6 +131,8 @@ if(roomParticipants.size >= maxParticipants ){
     })
     return;
 }
+// Stop processing if the socket disconnected during DB queries
+if(!socket.connected) return;
 currentRoomId = roomId;
 socket.join(roomId)
 

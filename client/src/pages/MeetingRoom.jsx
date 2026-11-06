@@ -183,7 +183,7 @@ return {
          isChatOpen = {isChatOpen}
          isParticipantOpen =  {isParticipantOpen}
         unreadCount = {unreadCount}
-         participantCount ={1+remoteUsers.length}
+         participantCount ={1+(remoteUsers?.length??0)}
         isHost = {isHost}
         onLeave = {handleLeave}
         onEndMeeting = {handleEndMeeting}
