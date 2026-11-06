@@ -128,7 +128,7 @@ return {
       </div>
       </header>
       {/* Main Content Area (Video Grid+ Side Panels) */}
-      <div className='flex-1 flex overflow-hidden'>
+      <div className='flex-1 min-h-0 min-w-0 flex overflow-hidden'>
         {/* Video Grid Center */}
         <VideoGrid 
         localStream={localStream}

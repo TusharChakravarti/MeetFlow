@@ -21,7 +21,7 @@ const VideoTile = ({stream,name,isLocal=false,audioEnabled= true,videoEnabled = 
 <div className={`relative w-full ${
   isScreenShare
     ? "h-full min-h-0 flex-1"
-    : "h-36 shrink-0"
+    : "h-full min-h-0 w-full"
 } bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-md flex items-center justify-center group`}>
         <video 
         ref = {videoRef} 

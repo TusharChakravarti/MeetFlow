@@ -21,19 +21,15 @@ const isScreenSharing = Boolean(activeScreenShare)
 
     }
   return (
-<div className={`flex-1 w-full flex p-4 overflow-hidden ${
+<div className={`flex-1 min-h-0 min-w-0 w-full flex p-4 overflow-hidden ${
   isScreenSharing
     ? "flex-row gap-4 items-stretch"
-    : "items-center justify-center overflow-y-auto"
+    : "items-stretch justify-stretch overflow-y-auto"
 }`}>
 <div className={`${
   isScreenSharing
-    ? "flex flex-row flex-1 min-w-0 h-full gap-4"
-    : `w-full grid gap-4 ${getGridClass()} ${
-        totalTiles === 1
-          ? "h-full max-w-none"
-          : "aspect-video max-h-[calc(100vh-140px)]"
-      }`
+    ? "flex flex-row flex-1 min-w-0 min-h-0 h-full gap-4"
+    : "w-full flex-1 min-w-0 min-h-0 grid gap-4 grid-cols-1 sm:grid-cols-2 auto-rows-fr"
 } transition-all duration-300`}>
     
 
