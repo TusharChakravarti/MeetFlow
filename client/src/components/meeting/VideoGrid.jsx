@@ -11,15 +11,7 @@ const activeScreenShare = captureStream || activeRemoteScreen?.screenStream
 
 const isScreenSharing = Boolean(activeScreenShare)
     // Determine grid column dynamically
-    const getGridClass = ()=>{
-        if(totalTiles===1) return "grid-cols-1 max-w-4xl"
-        if(totalTiles===2) return "grid-cols-1 md:grid-cols-2 max-w-5xl"
-         if(totalTiles<=4) return "grid-cols-1 md:grid-cols-2 max-w-5xl"
-          if(totalTiles<=6) return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-7xl"
 
-          return "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 max-w-7xl"
-
-    }
   return (
 <div className={`flex-1 min-h-0 min-w-0 w-full flex p-4 overflow-hidden ${
   isScreenSharing
@@ -29,9 +21,8 @@ const isScreenSharing = Boolean(activeScreenShare)
 <div className={`${
   isScreenSharing
     ? "flex flex-row flex-1 min-w-0 min-h-0 h-full gap-4"
-    : "w-full flex-1 min-w-0 min-h-0 grid gap-4 grid-cols-1 sm:grid-cols-2 auto-rows-fr"
+    : "w-full flex-1 min-w-0 min-h-0 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr"
 } transition-all duration-300`}>
-    
 
            {/* Active Screen Share*/}
           {
