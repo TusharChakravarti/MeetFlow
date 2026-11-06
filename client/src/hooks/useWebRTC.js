@@ -629,7 +629,7 @@ const startSession = async ()=>{
 
 socket.on("connect",joinRoom);
 socket.on("connect_error",handleSocketConnectError)
-const connectSocket = async ()=>{
+const connectSocket = async (callback)=>{
   try {
     const freshToken = await getToken({
       skipCache:true
