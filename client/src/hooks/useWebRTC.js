@@ -559,7 +559,13 @@ const handleAnswer = async ({responderSocketId,sdp})=>{
                      }
 
                 const handleSocketConnectError = (error)=>{
-                  console.error("Socket connection failed:",error.message);
+                   console.error("Socket connection failed:", {
+        message: error.message,
+        description: error.description,
+        context: error.context,
+        type: error.type
+    });
+
                   toast.error(error.message||"Unable to connect to meeting")
                 }
 
@@ -625,7 +631,11 @@ socket.on("connect",joinRoom);
 socket.on("connect_error",handleSocketConnectError)
 const connectSocket = async ()=>{
   try {
-    const token = await getToken()
+    const freshToken = await getToken({
+      skipCache:true
+    })
+      callback({ token: freshToken });
+    console.log("Clerk socket token received:", Boolean(token));
     if(!isMounted) return;
     if(!token){
         console.error("Clerk token not found");
@@ -640,6 +650,7 @@ const connectSocket = async ()=>{
   }
   } catch (error) {
       console.error("Socket connection error:", error);
+         callback({ token: null });
   }
 }
 

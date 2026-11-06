@@ -8,6 +8,7 @@ const activePresenters = new Map()
 
 export function setupSocketIO(io){
 io.on("connection",(socket)=>{
+     console.log("SOCKET CONNECTED:", socket.id);
  let currentRoomId = null
  let currentUser = null
 
@@ -251,7 +252,17 @@ socket.to(roomId).emit("user-joined",currentUser)
  })
 
  socket.on("request-screen-share",({roomId})=>{
+
+        console.log("SCREEN SHARE REQUEST:", {
+        socketId: socket.id,
+        requestedRoomId: roomId,
+        currentRoomId,
+        isParticipant: rooms.get(roomId)?.has(socket.id)
+    });
+
     //Verify that the user belongs to this meeting
+
+
     if (!currentRoomId || currentRoomId !== roomId) return;
     if(!rooms.get(currentRoomId)?.has(socket.id)){
         return;
@@ -388,6 +399,13 @@ if (!rooms.get(currentRoomId)?.has(socket.id)) return;
 
 socket.on("end-meeting",async ({roomId})=>{
     try {
+            console.log("END MEETING REQUEST:", {
+        socketId: socket.id,
+        requestedRoomId: roomId,
+        currentRoomId,
+        isParticipant: rooms.get(roomId)?.has(socket.id),
+        isHost: currentUser?.isHost
+    });
         if (!currentRoomId || currentRoomId !== roomId) return;
 if (!rooms.get(currentRoomId)?.has(socket.id)) return;
 if(!currentUser?.isHost) return;
@@ -404,7 +422,7 @@ if(!currentUser?.isHost) return;
              rooms.delete(roomId)
              activePresenters.delete(roomId)
     } catch (err) {
-        console.error("Error ending meeting:",err)
+      console.error("Error ending meeting:",err)
     }
 
 })
