@@ -1,6 +1,14 @@
 import React, { useEffect, useRef } from 'react'
 import {MicOffIcon, Monitor, UserIcon, VideoOff} from 'lucide-react'
-const VideoTile = ({stream,name,isLocal=false,audioEnabled= true,videoEnabled = true,isScreenShare = false}) => {
+const VideoTile = ({
+  stream,
+  name,
+  isLocal = false,
+  audioEnabled = true,
+  videoEnabled = true,
+  isScreenShare = false,
+  isCompact = false
+}) => {
     const videoRef  = useRef(null)
 
     useEffect(()=>{
@@ -18,10 +26,12 @@ const VideoTile = ({stream,name,isLocal=false,audioEnabled= true,videoEnabled = 
 
     const showCameraOff = !videoEnabled || !stream;
   return (
-<div className={`relative w-full ${
+<div className={`relative ${
   isScreenShare
-    ? "h-full min-h-0 flex-1"
-    : "h-full min-h-0 w-full"
+    ? "w-full h-full min-h-0 flex-1"
+    : isCompact
+      ? "w-36 h-24 sm:w-40 sm:h-28 md:w-full md:h-32 lg:h-36 shrink-0"
+      : "w-full h-full min-h-0"
 } bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-md flex items-center justify-center group`}>
         <video 
         ref = {videoRef} 
