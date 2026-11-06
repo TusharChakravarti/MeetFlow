@@ -62,7 +62,7 @@ const ControlBar = ({roomId,audioEnabled,VideoEnabled,OnToggleAudio,OnToggleVide
                   {/* Chat Toggle */}
 
                           <button onClick={onToggleChat}
-                className={`p-2.5 sm:p-3 lg:p-3.5relative rounded-2xl transition-all cursor-pointer border ${
+                className={`p-2.5 sm:p-3 lg:p-3.5 relative rounded-2xl transition-all cursor-pointer border ${
                     isChatOpen ? "bg-primary text-white border-primary shadow-md shadow-primary/20":"bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs" }`}
                      title="Toggle In-Meeting Chat"
                     
