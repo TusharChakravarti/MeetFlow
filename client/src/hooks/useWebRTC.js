@@ -629,12 +629,12 @@ const startSession = async ()=>{
 
 socket.on("connect",joinRoom);
 socket.on("connect_error",handleSocketConnectError)
-const connectSocket = async (callback)=>{
+const connectSocket = async ()=>{
   try {
     const freshToken = await getToken({
       skipCache:true
     })
-      callback({ token: freshToken });
+      
     console.log("Clerk socket token received:", Boolean(token));
     if(!isMounted) return;
     if(!token){
@@ -650,7 +650,7 @@ const connectSocket = async (callback)=>{
   }
   } catch (error) {
       console.error("Socket connection error:", error);
-         callback({ token: null });
+         
   }
 }
 
