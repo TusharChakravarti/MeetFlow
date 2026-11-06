@@ -29,7 +29,11 @@ const isScreenSharing = Boolean(activeScreenShare)
 <div className={`${
   isScreenSharing
     ? "flex flex-row flex-1 min-w-0 h-full gap-4"
-    : `w-full grid gap-4 ${getGridClass()} aspect-video max-h-[calc(100vh-140px)]`
+    : `w-full grid gap-4 ${getGridClass()} ${
+        totalTiles === 1
+          ? "h-full max-w-none"
+          : "aspect-video max-h-[calc(100vh-140px)]"
+      }`
 } transition-all duration-300`}>
     
 
