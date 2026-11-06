@@ -637,11 +637,11 @@ const connectSocket = async ()=>{
       
     console.log("Clerk socket token received:", Boolean(token));
     if(!isMounted) return;
-    if(!token){
+    if(!freshToken){
         console.error("Clerk token not found");
       return;
     }
-    socket.auth = {token}
+    socket.auth = {freshToken}
       if(!socket.connected){
     socket.connect()
   }
