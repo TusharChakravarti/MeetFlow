@@ -122,7 +122,7 @@ const {getToken,isLoaded,isSignedIn} = useAuth()
          peer.polite = socket.id>targetSocketId
       peer.onconnectionstatechange = ()=>{
         const state = peer.connectionState;
-        console.log(`Peer ${targetSocketId} connection state:`,state)
+       
         if(state === "closed"|| state == "failed"){
           peer.close()
           if(peersRef.current.get(targetSocketId)===peer){
@@ -635,13 +635,13 @@ const connectSocket = async ()=>{
       skipCache:true
     })
       
-    console.log("Clerk socket token received:", Boolean(freshToken));
+   
     if(!isMounted) return;
     if(!freshToken){
         console.error("Clerk token not found");
       return;
     }
-    socket.auth = {freshToken}
+    socket.auth = {token:freshToken}
       if(!socket.connected){
     socket.connect()
   }

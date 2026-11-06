@@ -55,9 +55,9 @@ app.post("/api/webhooks/razorpay",express.raw({type:"application/json"}), handle
 // Authenticate every Socket.IO connection
  io.use(async (socket,next)=>{
     try {
-          console.log("SOCKET AUTH MIDDLEWARE HIT");
+        
         const token = socket.handshake.auth?.token;
-           console.log("TOKEN RECEIVED:", !!token);
+          
         if(!token){
             return  next(new Error("Authentication required"))
         }
@@ -65,7 +65,7 @@ app.post("/api/webhooks/razorpay",express.raw({type:"application/json"}), handle
             secretKey:process.env.CLERK_SECRET_KEY,
             authorizedParties:allowedOrigins
         })
-         console.log("TOKEN VERIFIED:", !!verifiedToken?.sub);
+       
       if(!verifiedToken?.sub){
            return next(new Error("Invalid authentication token"))
       }
