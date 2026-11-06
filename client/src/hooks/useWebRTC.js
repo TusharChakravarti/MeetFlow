@@ -635,7 +635,7 @@ const connectSocket = async ()=>{
       skipCache:true
     })
       
-    console.log("Clerk socket token received:", Boolean(token));
+    console.log("Clerk socket token received:", Boolean(freshToken));
     if(!isMounted) return;
     if(!freshToken){
         console.error("Clerk token not found");
