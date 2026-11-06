@@ -24,7 +24,7 @@ const ControlBar = ({roomId,audioEnabled,VideoEnabled,OnToggleAudio,OnToggleVide
     }
   return (
     <div>
-        <footer className='w-full bg-white/90 backdrop-blur-md border-slate-200/80 px-6 py-4 flex items-center justify-between z-40 shadow-lg shadow-slate-200/50'>
+  <footer className='w-full shrink-0 bg-white/90 backdrop-blur-md border-t border-slate-200/80 px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 flex items-center justify-between gap-2 z-40 shadow-lg shadow-slate-200/50'>
             {/* Left Info/Copy Link */}
             <div className='hidden sm:flex items-center gap-3'>
               <span className='text-xs font-medium text-slate-600 font-mono tracking-wider'>Id:{roomId}</span>
@@ -36,10 +36,10 @@ const ControlBar = ({roomId,audioEnabled,VideoEnabled,OnToggleAudio,OnToggleVide
               
             </div>
              {/* Center Controls */}
-             <div className='flex items-center gap-3 mx-auto sm:mx-0'>
+            <div className='flex items-center justify-center gap-1.5 sm:gap-2 lg:gap-3 mx-auto sm:mx-0'>
                 {/* Audio Toggle */}
                 <button onClick={OnToggleAudio}
-                className={`p-3.5 rounded-2xl transition-all cursor-pointer border ${
+                className={`p-2.5 sm:p-3 lg:p-3.5 rounded-2xl transition-all cursor-pointer border ${
                     audioEnabled ? "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs":"bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-200 shadow-xs" }`}
                      title={audioEnabled ? "Mute Microphone":"Unmute Microphone"}
                     
@@ -50,7 +50,7 @@ const ControlBar = ({roomId,audioEnabled,VideoEnabled,OnToggleAudio,OnToggleVide
 
                 {/* Video Toggle */}
                    <button onClick={OnToggleVideo}
-                className={`p-3.5 rounded-2xl transition-all cursor-pointer border ${
+                className={`p-2.5 sm:p-3 lg:p-3.5 rounded-2xl transition-all cursor-pointer border ${
                     VideoEnabled ? "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs":"bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-200 shadow-xs" }`}
                      title={VideoEnabled ? "Turn Off Camera":"Turn On Camera"}
                     
@@ -62,7 +62,7 @@ const ControlBar = ({roomId,audioEnabled,VideoEnabled,OnToggleAudio,OnToggleVide
                   {/* Chat Toggle */}
 
                           <button onClick={onToggleChat}
-                className={`p-3.5 relative rounded-2xl transition-all cursor-pointer border ${
+                className={`p-2.5 sm:p-3 lg:p-3.5relative rounded-2xl transition-all cursor-pointer border ${
                     isChatOpen ? "bg-primary text-white border-primary shadow-md shadow-primary/20":"bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs" }`}
                      title="Toggle In-Meeting Chat"
                     
@@ -79,7 +79,7 @@ const ControlBar = ({roomId,audioEnabled,VideoEnabled,OnToggleAudio,OnToggleVide
                   {/* Participants Toggle */}
 
                                        <button onClick={onToggleParticipants}
-                className={`p-3.5 rounded-2xl transition-all cursor-pointer border relative ${
+                className={`p-2.5 sm:p-3 lg:p-3.5 rounded-2xl transition-all cursor-pointer border relative ${
                     isParticipantOpen ? "bg-primary text-white border-primary shadow-md shadow-primary/20":"bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-xs" }`}
                      title="Toggle Participants List"
                     
@@ -96,7 +96,7 @@ const ControlBar = ({roomId,audioEnabled,VideoEnabled,OnToggleAudio,OnToggleVide
                     {/* Screen Share Toggle */}
                     <button
                     onClick={screenRecording?onStopScreenShare:onStartScreenShare}
-                      className={`p-3.5 rounded-2xl transition-all cursor-pointer border ${
+                      className={`p-2.5 sm:p-3 lg:p-3.5 rounded-2xl transition-all cursor-pointer border ${
                      screenRecording
                       ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200"
                       : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300"}`}
@@ -110,7 +110,7 @@ const ControlBar = ({roomId,audioEnabled,VideoEnabled,OnToggleAudio,OnToggleVide
                    {/* Leave / End Meeting Button */}
                   {isHost ? (
                     <button onClick={onEndMeeting}
-                    className='p-3.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/25 transition-all cursor-pointer border border-red-500 ml-2 font-medium text-xs flex items-center gap-1.5'
+                    className='p-2.5 sm:p-3 lg:p-3.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/25 transition-all cursor-pointer border border-red-500 ml-2 font-medium text-xs flex items-center gap-1.5'
                     title='End Meeting For All'
                     
                     ><PhoneOffIcon className='w-5 h-5'/>
@@ -118,7 +118,7 @@ const ControlBar = ({roomId,audioEnabled,VideoEnabled,OnToggleAudio,OnToggleVide
                     </button>
                   ):(
                     <button onClick={onLeave}
-                    className='p-3.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/25 transition-all cursor-pointer border border-red-500 ml-2'
+                    className='p-2.5 sm:p-3 lg:p-3.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/25 transition-all cursor-pointer border border-red-500 ml-2'
                     title='Leave Meeting'
                     >
                         <PhoneOffIcon className='w-5 h-5'/>
