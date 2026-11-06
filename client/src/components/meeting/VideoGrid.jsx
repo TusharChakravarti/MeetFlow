@@ -30,7 +30,15 @@ const VideoGrid = ({
       <div className={`${
         isScreenSharing
           ? "flex flex-col md:flex-row flex-1 min-w-0 min-h-0 w-full gap-3 md:gap-4"
-          : "w-full h-full min-h-full grid grid-cols-1 gap-3 sm:gap-4 auto-rows-[minmax(220px,1fr)]"
+          : `w-full h-full min-h-full grid ${
+  remoteUsers.length + 1 === 1
+    ? "grid-cols-1"
+    : remoteUsers.length + 1 === 2
+      ? "grid-cols-2"
+      : remoteUsers.length + 1 <= 4
+        ? "grid-cols-2"
+        : "grid-cols-2 xl:grid-cols-3"
+} gap-3 sm:gap-4 auto-rows-[minmax(220px,1fr)]`
       } transition-all duration-300`}>
 
         {/* Active Screen Share */}
