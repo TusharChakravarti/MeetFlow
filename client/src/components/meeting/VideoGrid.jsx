@@ -10,7 +10,7 @@ const VideoGrid = ({
   videoEnabled
 }) => {
 
-  const activeRemoteScreen = remoteUsers.find(
+  const activeRemoteScreen = remoteUsers?.find(
     (remote) => remote.screenStream
   )
 
