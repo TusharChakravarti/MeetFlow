@@ -9,8 +9,10 @@ import { clerkMiddleware } from '@clerk/express'
 import {handleClerkWebhook, handleRazorpayWebhook}  from "./controllers/webhookController.js"
 import meetingRouter from "./routes/meetingRoutes.js";
 import { setupSocketIO } from "./socket.js";
+import {verifyToken} from "@clerk/backend"
 import { error } from "console";
 import billingRouter from "./routes/PricingRoutes.js";
+import tokens from "razorpay/dist/types/tokens.js"
  const app = express()
  const server = http.createServer(app)
  // Connect To Neon  & Initialize Tables
@@ -27,7 +29,7 @@ import billingRouter from "./routes/PricingRoutes.js";
 
 
 
-const allowedOrigins = process.env.ORIGINS.split(",")
+const allowedOrigins = process.env.ORIGINS.split(",").map(origin=>origin.trim()).filter(Boolean)
  app.use(cors({origin:allowedOrigins,credentials:true}))
  app.use(cookieParser())
 
@@ -48,6 +50,26 @@ app.post("/api/webhooks/razorpay",express.raw({type:"application/json"}), handle
     cors:{
         origin:allowedOrigins,
         credentials:true
+    }
+ })
+// Authenticate every Socket.IO connection
+ io.use(async (socket,next)=>{
+    try {
+        const token = socket.handshake.auth?.token;
+        if(!token){
+            return  next(new Error("Authentication required"))
+        }
+        const verifiedToken = await verifyToken(token,{
+            secretKey:process.env.CLERK_SECRET_KEY,
+            authorizedParties:allowedOrigins
+        })
+      if(!verifiedToken?.sub){
+           return next(new Error("Invalid authentication token"))
+      }
+      socket.data.userId = verifiedToken.sub
+    } catch (error) {
+            console.error("Socket authentication failed:", error.message);
+            next(new Error("Invalid oreepired authentication token"));
     }
  })
 

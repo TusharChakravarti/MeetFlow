@@ -47,9 +47,14 @@ io.on("connection",(socket)=>{
 
  // User joins a meeting Room
  socket.on("join-room",async ({roomId,user,audioEnabled = true,videoEnabled = true})=>{
-    // to avoid duplicate joining
+
   try {
-    if(currentRoomId && currentRoomId===roomId && rooms.get(roomId)?.has(socket.id)){
+      // Identity comes from the verified Clerk toke
+    const authenticatedUserId = socket.data.userId
+
+    if(!authenticatedUserId || !roomId) return;
+      // to avoid duplicate joining
+    if(currentRoomId===roomId && rooms.get(roomId)?.has(socket.id)){
          return;
     }
 
@@ -77,12 +82,25 @@ io.on("connection",(socket)=>{
         })
         return;
     }
+
+      // Fetch the authenticated user's profile from our database
+      const dbUsers = await sql`
+      SELECT id,name FROM users WHERE id = ${authenticatedUserId}
+      `
+      if(dbUsers.length === 0){
+        socket.emit("meeting-ended",{
+            message:"User profile not found.Please refresh and sign in again"
+        })
+        return;
+      }
+      
+      const dbUser = dbUsers[0]
     
-    const isHost = meeting.host_id && user?.id && meeting.host_id.toString() === user.id.toString()
+    const isHost = String(meeting.host_id) === String(authenticatedUserId);
     currentUser = {
         socketId:socket.id,
-        userId:user?.id,
-        userName:user?.name || "Anonymous",
+        userId:authenticatedUserId,
+        userName:dbUser?.name || "Anonymous",
         isHost,
         audioEnabled,
         videoEnabled
@@ -129,10 +147,7 @@ const userId = user?.id || null
 const existingParticipants = await sql `
 SELECT id FROM meeting_participants
 WHERE meeting_id = ${meeting.id}
-AND(
-(${userId}::text IS NOT NULL  AND user_id= ${userId})
-OR name = ${currentUser.userName}
-)
+AND user_id = ${authenticatedUserId}
 
 
 `
@@ -140,7 +155,7 @@ OR name = ${currentUser.userName}
 if(existingParticipants.length === 0 ){
     await sql`
     INSERT INTO meeting_participants (meeting_id,user_id,name,joined_at)
-    VALUES (${meeting.id}, ${userId},${currentUser.userName},NOW())
+    VALUES (${meeting.id}, ${authenticatedUserId},${currentUser.userName},NOW())
     `
 }
  
@@ -154,32 +169,36 @@ socket.to(roomId).emit("user-joined",currentUser)
 
   } catch (err) {
     console.error("Error joining room in socket:",err)
+    if(currentRoomId){
+        leaveCurrentRoom()
+    }
     socket.emit("meeting-ended",{
         message:"Failed to join room."
     })
   }
  })
 
- socket.on("typing",({roomId,userId,userName})=>{
-    if(!roomId || !userName) return;
-
+ socket.on("typing",({roomId})=>{
+  if (!currentRoomId || currentRoomId !== roomId) return;
+  if (!rooms.get(roomId)?.has(socket.id)) return;
     if(!socket.rooms.has(roomId)) return;
 
     // Notify other participants
     socket.to(roomId).emit("user-typing",{
-        userId,
-        userName
+        userId:currentUser.userId,
+        userName:currentUser.userName
     })
 
  })
 
- socket.on("stop-typing",({roomId,userId})=>{
-        if(!roomId || !userId) return;
+ socket.on("stop-typing",({roomId})=>{
+       if (!currentRoomId || currentRoomId !== roomId) return;
+  if (!rooms.get(roomId)?.has(socket.id)) return;
 
     if(!socket.rooms.has(roomId)) return;
 
     socket.to(roomId).emit("user-stopping-typing",{
-        userId
+        userId:currentUser.userId
     })
  })
  // WebRTC Signaling: Offer
@@ -221,7 +240,7 @@ socket.to(roomId).emit("user-joined",currentUser)
  socket.on("ice-candidate",({targetSocketId,senderSocketId,candidate})=>{
     if(!currentRoomId || senderSocketId !==socket.id) return;
     const partcipants = rooms.get(currentRoomId);
-    if(!partcipants.has(socket.id)||!partcipants.has(targetSocketId)) return;
+    if(!partcipants?.has(socket.id)||!partcipants.has(targetSocketId)) return;
  io.to(targetSocketId).emit("ice-candidate",{
     senderSocketId,
     candidate
@@ -282,7 +301,7 @@ socket.to(roomId).emit("user-joined",currentUser)
     const participants = rooms.get(currentRoomId);
 if(!participants?.has(socket.id)) return;
 
-    participants.get(socket.id).audioEnabled = audioEnabled
+    participants.get(socket.id).audioEnabled = Boolean(audioEnabled)
 
 socket.to(roomId).emit("user-toggled-audio",{
     socketId:socket.id,
@@ -303,7 +322,7 @@ socket.to(roomId).emit("user-toggled-audio",{
 if (!participants?.has(socket.id)) return;
 
 
-  rooms.get(roomId).get(socket.id).videoEnabled= videoEnabled
+  participants.get(socket.id).videoEnabled= Boolean(videoEnabled)
 
 socket.to(roomId).emit("user-toggled-video",{
     socketId:socket.id,
@@ -319,26 +338,45 @@ socket.on("send-message",async({roomId,message})=>{
  try {
     if (!currentRoomId || currentRoomId !== roomId) return;
 if (!rooms.get(currentRoomId)?.has(socket.id)) return;
+
+
+  
+       const text = typeof message?.text === "string"? message.text.trim():""
+
+       if(!text || text.length>5000) return;
+
+     
+
     const meetings = await sql`
     SELECT id,status FROM meetings WHERE meeting_id = ${roomId}
     `
-    if(meetings.length>0 && meetings[0].status!="ended"){
-        const meetingId = meetings[0].id;
-        const senderId = message.senderId || null
+    if(meetings.length===0 || meetings[0].status === "ended") return;
+       const meetingId = meetings[0].id;
+       
+      
 
         await sql `
-        INSERT INTO  meeting_messages (meeting_id,sender_id,sender_name,text,timestamp)
-        VALUES(${meetingId},${senderId},${message.senderName || "Anonymous"},${message.text},NOW())
+        INSERT INTO  meeting_messages 
+        (meeting_id,sender_id,sender_name,text,timestamp)
+        VALUES
+        (${meetingId},
+        ${currentUser.userId},
+        ${currentUser.userName || "Anonymous"},
+        ${text},NOW())
 
         `
         io.in(roomId).emit("receive-message",{
             ...message,
-            senderSocketId:socket.id
+            text,
+            senderId:currentUser.userId,
+            senderName:currentUser.userName,
+            senderSocketId:socket.id,
+            timestamp:new Date().toISOString()
         })
 
         
 
-    }
+    
     
  } catch (err) {
     console.error("Error saving chat messages to DB:",err)

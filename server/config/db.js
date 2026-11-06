@@ -59,6 +59,6 @@ export async  function initDB(){
     }
     catch(err){
      console.error("Error initializing database tables",err)
-     throw error
+     throw err
     }
 }

@@ -15,7 +15,7 @@ const ICE_SERVERS = {
 
 const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
   
-const {getToken} = useAuth()
+const {getToken,isLoaded,isSignedIn} = useAuth()
   const [localStream,setLocalStream] = useState(null)
   const [remoteUsers,setRemoteUsers] = useState([]) // Array of { socketId, userId, userName, stream, audioEnabled, videoEnabled }
   const [audioEnabled,setAudioEnabled] = useState(true)
@@ -72,6 +72,8 @@ const {getToken} = useAuth()
         return audioStream;
        } catch (error) {
         console.error("Audio-only fallback error:", error);
+        setAudioEnabled(false)
+        setVideoEnabled(false)
            return null;
        }
       
@@ -345,7 +347,7 @@ const handleScreenShareEnded = ()=>{
 
   useEffect(()=>{
 
-if(!roomId || !user ||!enabled) return;
+if(!isLoaded || !isSignedIn || !roomId || !user || !enabled) return;
 
 let isMounted = true;
 
@@ -431,6 +433,44 @@ const handleAnswer = async ({responderSocketId,sdp})=>{
                 }
               }
          }
+
+         const handleScreenShareApproved = async ()=>{
+              // Capture the current request version before starting async work
+                   const requestversion = screenShareRequestVersionRef.current
+               const stream = await initScreenShare()
+           
+               if(requestversion!==screenShareRequestVersionRef.current){
+                 stopScreenShare()
+                 return;
+                }
+              if(!stream){
+                socket.emit("cancel-screen-share",{
+                  roomId
+                })
+                return;
+              }
+              const screenTrack = stream.getVideoTracks()[0]
+
+               if(!screenTrack){
+                stopScreenShare()
+                return
+               }
+
+               peersRef.current.forEach(((peer)=>{
+                if(peer.signalingState !== "closed") peer.addTrack(screenTrack,stream)
+               }))
+
+               screenTrack.onended = ()=>{
+                handleScreenShareEnded()
+            }
+            }
+
+            const handleForceStopScreenShare = ()=>{
+              console.log("Another participant started sharing.Stopping your screen share");
+              screenShareRequestVersionRef.current+=1;
+              stopScreenShare()
+              
+            }
 
 
 
@@ -518,6 +558,11 @@ const handleAnswer = async ({responderSocketId,sdp})=>{
                   
                      }
 
+                const handleSocketConnectError = (error)=>{
+                  console.error("Socket connection failed:",error.message);
+                  toast.error(error.message||"Unable to connect to meeting")
+                }
+
 const startSession = async ()=>{
 
 
@@ -540,43 +585,9 @@ const startSession = async ()=>{
 
             socket.on("ice-candidate",handleIceCandidate)
 
-            socket.on("screen-share-approved",async ()=>{
-              // Capture the current request version before starting async work
-                   const requestversion = screenShareRequestVersionRef.current
-               const stream = await initScreenShare()
-           
-               if(requestversion!==screenShareRequestVersionRef.current){
-                 stopScreenShare()
-                 return;
-                }
-              if(!stream){
-                socket.emit("cancel-screen-share",{
-                  roomId
-                })
-                return;
-              }
-              const screenTrack = stream.getVideoTracks()[0]
+            socket.on("screen-share-approved", handleScreenShareApproved);
 
-               if(!screenTrack){
-                stopScreenShare()
-                return
-               }
-
-               peersRef.current.forEach(((peer)=>{
-                if(peer.signalingState !== "closed") peer.addTrack(screenTrack,stream)
-               }))
-
-               screenTrack.onended = ()=>{
-                handleScreenShareEnded()
-            }
-            })
-
-            socket.on("force-stop-screen-share",()=>{
-              console.log("Another participant started sharing.Stopping your screen share");
-              screenShareRequestVersionRef.current+=1;
-              stopScreenShare()
-              
-            })
+            socket.on("force-stop-screen-share",handleForceStopScreenShare)
 
               // 6. Handle peer audio toggle
 
@@ -611,22 +622,28 @@ const startSession = async ()=>{
 
 
 socket.on("connect",joinRoom);
+socket.on("connect_error",handleSocketConnectError)
 const connectSocket = async ()=>{
   try {
     const token = await getToken()
-    if(!token) return;
+    if(!isMounted) return;
+    if(!token){
+        console.error("Clerk token not found");
+      return;
+    }
     socket.auth = {token}
-  } catch (error) {
-    
-  }
-}
-
-  if(!socket.connected){
+      if(!socket.connected){
     socket.connect()
   }
   else{
     joinRoom()
   }
+  } catch (error) {
+      console.error("Socket connection error:", error);
+  }
+}
+
+
 
 await connectSocket()
 
@@ -663,6 +680,9 @@ await connectSocket()
   socket.off("user-toggled-video",handleUserVideoToggle);
   socket.off("user-left",handleUserLeft);
   socket.off("meeting-ended",handleMeetingEnded);
+  socket.off("connect_error", handleSocketConnectError);
+ socket.off("screen-share-approved", handleScreenShareApproved);
+socket.off("force-stop-screen-share", handleForceStopScreenShare);
   if(captureStreamRef.current){
     captureStreamRef.current.getTracks().forEach((track)=>track.stop())
   }
@@ -689,7 +709,7 @@ await connectSocket()
   }
 
 
-  },[roomId,user?.id,enabled,createPeerConnection,initLocalStream,onMeetingEnded])
+  },[roomId,user?.id,enabled,createPeerConnection,initLocalStream,onMeetingEnded,getToken,isLoaded,isSignedIn])
 
 
   
