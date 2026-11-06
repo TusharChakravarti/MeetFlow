@@ -3,6 +3,8 @@ import { sql } from "./config/db.js"
 // Socket.IO Room State: roomId -> Map<socketId,participantObject>
 
 const rooms = new Map()
+const activePresenters = new Map()
+
 
 export function setupSocketIO(io){
 io.on("connection",(socket)=>{
@@ -18,6 +20,8 @@ io.on("connection",(socket)=>{
         roomParticipants.delete(socket.id)
         if(roomParticipants.size === 0){
             rooms.delete(roomId)
+               // No participants left, so remove presenter ownership
+            activePresenters.delete(roomId)
         }
         else{
             socket.to(roomId).emit("user-left",{
@@ -25,11 +29,18 @@ io.on("connection",(socket)=>{
                 user:currentUser
             })
         }
+
+
+
      
     }
+        if(activePresenters.get(roomId) === socket.id){
+     activePresenters.delete(roomId)
+  }
+
    socket.leave(roomId)
-        currentRoomId = null;
-        currentUser = null;
+    currentRoomId = null;
+    currentUser = null;
 
 
 }
@@ -176,6 +187,9 @@ socket.to(roomId).emit("user-joined",currentUser)
  // send the information needed to start the connection
 
  socket.on("offer",({targetSocketId,callerSocketId,sdp,screenStreamId})=>{
+     if(!currentRoomId || callerSocketId !==socket.id) return;
+     const participants = rooms.get(currentRoomId)
+     if(!participants?.has(socket.id) || !participants.has(targetSocketId)) return;
     io.to(targetSocketId).emit("offer",{
         callerSocketId,
         sdp,
@@ -189,6 +203,11 @@ socket.to(roomId).emit("user-joined",currentUser)
  // WebRTC Signaling : Answer
 // accept the offer request and process connection
   socket.on("answer",({targetSocketId,responderSocketId,sdp})=>{
+    if(!currentRoomId || responderSocketId !==socket.id) return
+        const partcipants = rooms.get(currentRoomId)
+
+        if(!partcipants?.has(socket.id)||!partcipants.has(targetSocketId)) return;
+ 
     io.to(targetSocketId).emit("answer",{
         responderSocketId,
         sdp,
@@ -200,6 +219,9 @@ socket.to(roomId).emit("user-joined",currentUser)
  // passes the connection details from one user to the other so WebRTC can figure out how to connect them directly
 
  socket.on("ice-candidate",({targetSocketId,senderSocketId,candidate})=>{
+    if(!currentRoomId || senderSocketId !==socket.id) return;
+    const partcipants = rooms.get(currentRoomId);
+    if(!partcipants.has(socket.id)||!partcipants.has(targetSocketId)) return;
  io.to(targetSocketId).emit("ice-candidate",{
     senderSocketId,
     candidate
@@ -209,14 +231,59 @@ socket.to(roomId).emit("user-joined",currentUser)
  
  })
 
+ socket.on("request-screen-share",({roomId})=>{
+    //Verify that the user belongs to this meeting
+    if (!currentRoomId || currentRoomId !== roomId) return;
+    if(!rooms.get(currentRoomId)?.has(socket.id)){
+        return;
+    }
+
+    if(activePresenters.get(roomId)===socket.id){
+     
+        return;
+    }
+
+    //  Find the current presenter
+
+    const previousPrsesnterId = activePresenters.get(roomId)
+
+      // Assign the new presenter
+
+      activePresenters.set(roomId,socket.id)
+
+        //  Tell the previous presenter to stop sharing
+
+        if(previousPrsesnterId && previousPrsesnterId !==socket.id){
+            io.to(previousPrsesnterId).emit("force-stop-screen-share")
+        }
+
+        // Approve the new presenter
+
+        socket.emit("screen-share-approved")
+
+   
+
+
+ })
+
+      socket.on("cancel-screen-share",({roomId})=>{
+             // Only the active presenter can release ownership
+               if (!currentRoomId || currentRoomId !== roomId) return;
+           if (!rooms.get(currentRoomId)?.has(socket.id)) return;
+            if(activePresenters.get(roomId)===socket.id){
+                activePresenters.delete(roomId)
+            }
+        })
  // Audio toggle Event
 
  
  socket.on("toggle-audio",({roomId,audioEnabled})=>{
+    if(!currentRoomId||currentRoomId!==roomId) return;
+    const participants = rooms.get(currentRoomId);
+if(!participants?.has(socket.id)) return;
 
-if(rooms.has(roomId) && rooms.get(roomId).has(socket.id)){
-    rooms.get(roomId).get(socket.id).audioEnabled = audioEnabled
-}
+    participants.get(socket.id).audioEnabled = audioEnabled
+
 socket.to(roomId).emit("user-toggled-audio",{
     socketId:socket.id,
     audioEnabled
@@ -230,9 +297,14 @@ socket.to(roomId).emit("user-toggled-audio",{
 
   socket.on("toggle-video",({roomId,videoEnabled})=>{
 
-if(rooms.has(roomId) && rooms.get(roomId).has(socket.id)){
-    rooms.get(roomId).get(socket.id).videoEnabled= videoEnabled
-}
+    if (!currentRoomId || currentRoomId !== roomId) return;
+     const participants = rooms.get(currentRoomId);
+
+if (!participants?.has(socket.id)) return;
+
+
+  rooms.get(roomId).get(socket.id).videoEnabled= videoEnabled
+
 socket.to(roomId).emit("user-toggled-video",{
     socketId:socket.id,
     videoEnabled
@@ -245,6 +317,8 @@ socket.to(roomId).emit("user-toggled-video",{
 
 socket.on("send-message",async({roomId,message})=>{
  try {
+    if (!currentRoomId || currentRoomId !== roomId) return;
+if (!rooms.get(currentRoomId)?.has(socket.id)) return;
     const meetings = await sql`
     SELECT id,status FROM meetings WHERE meeting_id = ${roomId}
     `
@@ -276,6 +350,9 @@ socket.on("send-message",async({roomId,message})=>{
 
 socket.on("end-meeting",async ({roomId})=>{
     try {
+        if (!currentRoomId || currentRoomId !== roomId) return;
+if (!rooms.get(currentRoomId)?.has(socket.id)) return;
+if(!currentUser?.isHost) return;
         await sql`
         UPDATE meetings 
         SET status = 'ended', ended_at = NOW()
@@ -287,6 +364,7 @@ socket.on("end-meeting",async ({roomId})=>{
         })
          io.in(roomId).socketsLeave(roomId)
              rooms.delete(roomId)
+             activePresenters.delete(roomId)
     } catch (err) {
         console.error("Error ending meeting:",err)
     }

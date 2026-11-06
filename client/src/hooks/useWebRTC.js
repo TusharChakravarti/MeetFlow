@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { captureOwnerStack, useCallback, useEffect, useRef, useState } from 'react'
 import {socket} from "../config/socket"
 import toast from 'react-hot-toast';
-import { types } from 'node:ffi';
+import {useAuth} from "@clerk/react"
+
 
 
 const ICE_SERVERS = {
@@ -13,24 +14,30 @@ const ICE_SERVERS = {
 };
 
 const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
+  
+const {getToken} = useAuth()
   const [localStream,setLocalStream] = useState(null)
   const [remoteUsers,setRemoteUsers] = useState([]) // Array of { socketId, userId, userName, stream, audioEnabled, videoEnabled }
   const [audioEnabled,setAudioEnabled] = useState(true)
   const [videoEnabled,setVideoEnabled] = useState(true)
   const [captureStream,setCaptureStream] = useState(null)
   const [screenRecording,setScreenRecording] = useState(false)
+
   
 
   const peersRef = useRef(new Map()) // socketId -> RTCPeerConnection of remote participants
   const localStreamRef = useRef(null)
   const captureStreamRef = useRef(null)
+  const screenShareRequestVersionRef = useRef(0)
 
+  
   const mediaRef = useRef({audioEnabled,videoEnabled})
 
   
 
   const icecandidateQueue = useRef(new Map())
   const processingCandidates = useRef(new Set())
+
 
   useEffect(()=>{
   mediaRef.current = {audioEnabled,videoEnabled}
@@ -110,6 +117,7 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
        
       const peer = new RTCPeerConnection(ICE_SERVERS)
 
+         peer.polite = socket.id>targetSocketId
       peer.onconnectionstatechange = ()=>{
         const state = peer.connectionState;
         console.log(`Peer ${targetSocketId} connection state:`,state)
@@ -145,8 +153,8 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
             console.error("Error during negotiation:", error);
         }
         finally{
-          peer.polite = socket.id>targetSocketId
-          peer.ignoreOffer = false
+       
+         
           peer.makingOffer = false
 
         }
@@ -263,6 +271,7 @@ const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
 
     
    })
+ 
         captureStreamRef.current = stream
         setCaptureStream(stream)
         setScreenRecording(true)
@@ -290,37 +299,11 @@ const handleScreenShareEnded = ()=>{
 }
    const startScreenShare = async()=>{
 
- const stream = await initScreenShare()
- if(!stream){
-  return;
- }
- 
-const screenTrack = stream.getVideoTracks()[0]
+    if(captureStreamRef.current) return;
 
-if(!screenTrack){
-  stream.getTracks().forEach((track)=>track.stop())
-  captureStreamRef.current = null
-  setCaptureStream(null)
-  setScreenRecording(false)
-  return;
-}
-
-peersRef.current.forEach((peer)=>{
-  if(peer.signalingState !== "closed"){
-  peer.addTrack(screenTrack,stream)
-
-  }
-  screenTrack.onended = ()=>{
-    handleScreenShareEnded()
-  }
-
- 
-  
-})
-
-
-
-
+    socket.emit("request-screen-share",{
+      roomId
+    })
 
    }
    const stopScreenShare = ()=>{
@@ -330,6 +313,7 @@ peersRef.current.forEach((peer)=>{
     const screenTrack = stream.getVideoTracks()[0];
 
     peersRef.current.forEach((peer)=>{
+      if(peer.signalingState === "closed") return;
      const sender  = peer.getSenders().find((sender)=>sender.track === screenTrack)
        if(sender){
     peer.removeTrack(sender)
@@ -341,6 +325,13 @@ peersRef.current.forEach((peer)=>{
   captureStreamRef.current = null;
   setCaptureStream(null)
   setScreenRecording(false)
+
+  //Release presenter ownership on server
+
+
+  socket.emit("cancel-screen-share",{
+    roomId
+  })
 
 
  
@@ -377,21 +368,7 @@ const handleAllUsers = async(existingUsers)=>{
     existingUser
   )
 
-  try {
-    const offer  = await peer.createOffer()
-          if (!isMounted) return;
-          await peer.setLocalDescription(offer)
-               if (!isMounted) return;
-
-               socket.emit("offer",{
-                targetSocketId:existingUser.socketId,
-                callerSocketId:socket.id,
-                sdp:peer.localDescription
-               })
-
-  } catch (error) {
-     console.error("Error creating offer:", error);
-  }
+ 
  }
 }
 
@@ -409,7 +386,7 @@ const handleOffer = async ({callerSocketId, sdp,callerUser,screenStreamId})=>{
  peer.ignoreOffer = !peer.polite && offerCollition
 
  if(peer.ignoreOffer){
-
+   icecandidateQueue.current.delete(callerSocketId)
   return;
  }
 
@@ -563,6 +540,44 @@ const startSession = async ()=>{
 
             socket.on("ice-candidate",handleIceCandidate)
 
+            socket.on("screen-share-approved",async ()=>{
+              // Capture the current request version before starting async work
+                   const requestversion = screenShareRequestVersionRef.current
+               const stream = await initScreenShare()
+           
+               if(requestversion!==screenShareRequestVersionRef.current){
+                 stopScreenShare()
+                 return;
+                }
+              if(!stream){
+                socket.emit("cancel-screen-share",{
+                  roomId
+                })
+                return;
+              }
+              const screenTrack = stream.getVideoTracks()[0]
+
+               if(!screenTrack){
+                stopScreenShare()
+                return
+               }
+
+               peersRef.current.forEach(((peer)=>{
+                if(peer.signalingState !== "closed") peer.addTrack(screenTrack,stream)
+               }))
+
+               screenTrack.onended = ()=>{
+                handleScreenShareEnded()
+            }
+            })
+
+            socket.on("force-stop-screen-share",()=>{
+              console.log("Another participant started sharing.Stopping your screen share");
+              screenShareRequestVersionRef.current+=1;
+              stopScreenShare()
+              
+            })
+
               // 6. Handle peer audio toggle
 
               socket.on("user-toggled-audio",handleUserAudioToggle)
@@ -596,6 +611,15 @@ const startSession = async ()=>{
 
 
 socket.on("connect",joinRoom);
+const connectSocket = async ()=>{
+  try {
+    const token = await getToken()
+    if(!token) return;
+    socket.auth = {token}
+  } catch (error) {
+    
+  }
+}
 
   if(!socket.connected){
     socket.connect()
@@ -603,6 +627,9 @@ socket.on("connect",joinRoom);
   else{
     joinRoom()
   }
+
+await connectSocket()
+
 
 
                     
@@ -636,6 +663,15 @@ socket.on("connect",joinRoom);
   socket.off("user-toggled-video",handleUserVideoToggle);
   socket.off("user-left",handleUserLeft);
   socket.off("meeting-ended",handleMeetingEnded);
+  if(captureStreamRef.current){
+    captureStreamRef.current.getTracks().forEach((track)=>track.stop())
+  }
+  captureStreamRef.current = null;
+  socket.emit("cancel-screen-share",{
+    roomId
+  })
+  setCaptureStream(null)
+  setScreenRecording(false)
 
    socket.emit("leave-room")
  
