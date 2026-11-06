@@ -298,6 +298,10 @@ socket.to(roomId).emit("user-joined",currentUser)
             if(activePresenters.get(roomId)===socket.id){
                 activePresenters.delete(roomId)
             }
+
+            socket.to(roomId).emit("screen-share-stopped",{
+                socketId:socket.id
+            })
         })
  // Audio toggle Event
 

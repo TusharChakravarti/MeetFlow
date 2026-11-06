@@ -549,6 +549,15 @@ const handleAnswer = async ({responderSocketId,sdp})=>{
                  
                 }
 
+                const handleScreenShareStopped =  ({socketId})=>{
+                  setRemoteUsers((prev)=>{
+                    prev.map((remote)=>{
+                      remote.socketId ===socketId?{...remote,screenStream:null}:
+                      remote
+                    })
+                  })
+                }
+
                 const handleMeetingEnded = ({message})=>{
                       toast.error(message||"This meeting has ended")
                       if(onMeetingEnded){
@@ -594,6 +603,8 @@ const startSession = async ()=>{
             socket.on("screen-share-approved", handleScreenShareApproved);
 
             socket.on("force-stop-screen-share",handleForceStopScreenShare)
+
+            socket.on("screen-share-stopped",handleScreenShareStopped)
 
               // 6. Handle peer audio toggle
 
@@ -694,6 +705,7 @@ connectSocket()
   socket.off("connect_error", handleSocketConnectError);
  socket.off("screen-share-approved", handleScreenShareApproved);
 socket.off("force-stop-screen-share", handleForceStopScreenShare);
+socket.off("screen-share-stopped", handleScreenShareStopped);
   if(captureStreamRef.current){
     captureStreamRef.current.getTracks().forEach((track)=>track.stop())
   }
