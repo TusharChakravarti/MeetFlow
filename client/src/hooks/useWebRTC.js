@@ -656,7 +656,7 @@ const connectSocket = async ()=>{
 
 
 
-await connectSocket()
+connectSocket()
 
 
 
