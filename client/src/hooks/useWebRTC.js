@@ -652,27 +652,40 @@ socket.on("connect",joinRoom);
 socket.on("connect_error",handleSocketConnectError)
 const connectSocket = async ()=>{
   try {
+      socket.auth = async (callback)=>{
+try {
     const freshToken = await getToken({
       skipCache:true
     })
-      
-   
-    if(!isMounted) return;
+
     if(!freshToken){
-        console.error("Clerk token not found");
-      return;
+       console.error("Clerk token not found");
+       callback({token:null})
+       return;
     }
-    socket.auth = {token:freshToken}
-      if(!socket.connected){
-    socket.connect()
+
+    callback({token:freshToken})
+
+ 
+  } catch (error) {
+      console.error("Token refresh failed:", error);
+         callback({token:null})
+  }
+  }
+
+  if(!socket.connected){
+    socket.connect();
+  
   }
   else{
     joinRoom()
   }
+    
   } catch (error) {
-      console.error("Socket connection error:", error);
-         
+     console.error("Socket connection error:", error);
   }
+
+  
 }
 
 
