@@ -128,7 +128,7 @@ const {getToken,isLoaded,isSignedIn} = useAuth()
           if(peersRef.current.get(targetSocketId)===peer){
           peersRef.current.delete(targetSocketId)
 
-          setRemoteUsers(prev=> prev.filter((u)=>u.socketId!==targetSocketId))
+          setRemoteUsers(prev=> (prev ?? []).filter((u)=>u.socketId!==targetSocketId))
           }
 
         }
@@ -551,7 +551,7 @@ const handleAnswer = async ({responderSocketId,sdp})=>{
 
                  icecandidateQueue.current.delete(socketId)
 
-                 setRemoteUsers((prev)=>prev.filter((u)=> u.socketId!==socketId))
+                 setRemoteUsers((prev)=>(prev??[]).filter((u)=> u.socketId!==socketId))
                    
 
               
