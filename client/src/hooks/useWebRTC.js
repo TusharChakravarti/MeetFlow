@@ -419,7 +419,8 @@ const handleOffer = async ({callerSocketId, sdp,callerUser,screenStreamId})=>{
             
               targetSocketId:callerSocketId,
               responderSocketId:socket.id,
-              sdp:peer.localDescription
+              sdp:peer.localDescription,
+                screenStreamId:captureStreamRef.current?.id ?? null
             })
 
             
@@ -430,10 +431,11 @@ const handleOffer = async ({callerSocketId, sdp,callerUser,screenStreamId})=>{
 
 }
 
-const handleAnswer = async ({responderSocketId,sdp})=>{
+const handleAnswer = async ({responderSocketId,sdp,screenStreamId})=>{
               const peer = peersRef.current.get(responderSocketId);
               if(peer){
                 try {
+                  peer.remoteScreenStreamId = screenStreamId
                   await peer.setRemoteDescription(new RTCSessionDescription(sdp))
                       if (!isMounted) return;
                   await processCandidateQueue(responderSocketId,peer)

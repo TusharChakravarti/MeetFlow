@@ -230,7 +230,7 @@ socket.to(roomId).emit("user-joined",currentUser)
 
  // WebRTC Signaling : Answer
 // accept the offer request and process connection
-  socket.on("answer",({targetSocketId,responderSocketId,sdp})=>{
+  socket.on("answer",({targetSocketId,responderSocketId,sdp,screenStreamId})=>{
     if(!currentRoomId || responderSocketId !==socket.id) return
         const partcipants = rooms.get(currentRoomId)
 
@@ -239,6 +239,7 @@ socket.to(roomId).emit("user-joined",currentUser)
     io.to(targetSocketId).emit("answer",{
         responderSocketId,
         sdp,
+        screenStreamId
     })
  
  })
