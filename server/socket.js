@@ -164,7 +164,13 @@ if(existingParticipants.length === 0 ){
  
 // send list of existing users to newcomer
 
-socket.emit("all-users",existingUsers)
+const activePresenterId = activePresenters.get(roomId) || null
+
+socket.emit("all-users",{
+    users:existingUsers,
+    activePresenterId
+
+})
 
 // Notify everyone else in the room
 socket.to(roomId).emit("user-joined",currentUser)

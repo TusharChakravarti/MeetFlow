@@ -140,6 +140,12 @@ const {getToken,isLoaded,isSignedIn} = useAuth()
         })
       }
 
+      if(captureStreamRef.current){
+        captureStreamRef.current.getTracks().forEach((track)=> {
+          peer.addTrack(track,captureStreamRef.current)
+        })
+      }
+
        peer.onnegotiationneeded = async ()=>{
         if(peer.signalingState !== "stable" || peer.makingOffer) return;
         try {
@@ -365,8 +371,8 @@ const joinRoom = ()=>{
 
 } 
 
-const handleAllUsers = async(existingUsers)=>{
- for(const existingUser of existingUsers){
+const handleAllUsers = async({users,activePresenterId})=>{
+ for(const existingUser of users){
   if(!isMounted) return;
   const peer = createPeerConnection(
     existingUser.socketId,
@@ -375,6 +381,7 @@ const handleAllUsers = async(existingUsers)=>{
 
  
  }
+  console.log("Currently active presenter:", activePresenterId);
 }
 
 const handleUserJoined = (newUser)=>{
