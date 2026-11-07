@@ -195,7 +195,7 @@ const {getToken,isLoaded,isSignedIn} = useAuth()
               // if a new presenter starts , remove the previous screen form UI
               
               
-              const updatedUsers = isScreenShare ? prev.map((user)=>({
+              const updatedUsers = isScreenShare ? (prev??[]).map((user)=>({
                 ...user,
                 screenStream:null
               })):[...prev]
@@ -240,7 +240,7 @@ const {getToken,isLoaded,isSignedIn} = useAuth()
 
            if(isScreenShare){
             event.track.onended = ()=>{
-              setRemoteUsers((prev)=> prev.map((user)=>(
+              setRemoteUsers((prev)=> (prev ?? []).map((user)=>(
                 user.socketId === targetSocketId && user.screenStream === remoteStream
                 ?{...user,screenStream:null}:user
               )))
@@ -381,7 +381,7 @@ const handleAllUsers = async({users,activePresenterId})=>{
 
  
  }
-  console.log("Currently active presenter:", activePresenterId);
+
 }
 
 const handleUserJoined = (newUser)=>{
@@ -523,14 +523,14 @@ const handleAnswer = async ({responderSocketId,sdp})=>{
             }
 
             const handleUserAudioToggle = ({socketId,audioEnabled})=>{
-                setRemoteUsers((prev)=>prev.map(
+                setRemoteUsers((prev)=>(prev ?? []).map(
                   (u)=> u.socketId == socketId ? {...u,audioEnabled}:u
                 ))
 
               }
 
               const handleUserVideoToggle = ({socketId,videoEnabled})=>{
-                setRemoteUsers((prev)=>prev.map(
+                setRemoteUsers((prev)=>(prev??[]).map(
                   (u)=> u.socketId == socketId ? {...u,videoEnabled}:u
                 ))
 
@@ -561,7 +561,7 @@ const handleAnswer = async ({responderSocketId,sdp})=>{
 
                 const handleScreenShareStopped =  ({socketId})=>{
                   setRemoteUsers((prev)=>{
-                    prev.map((remote)=>{
+                    (prev ?? []).map((remote)=>{
                       remote.socketId ===socketId?{...remote,screenStream:null}:
                       remote
                     })

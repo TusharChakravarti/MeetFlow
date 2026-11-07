@@ -72,7 +72,9 @@ app.post("/api/webhooks/razorpay",express.raw({type:"application/json"}), handle
       socket.data.userId = verifiedToken.sub
       next()
     } catch (error) {
-            console.error("Socket authentication failed:", error.message);
+            console.error("ACTUAL SOCKET AUTH ERROR:", error);
+
+
             next(new Error("Invalid oreepired authentication token"));
     }
  })
