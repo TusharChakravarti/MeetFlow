@@ -189,8 +189,16 @@ const {getToken,isLoaded,isSignedIn} = useAuth()
            peer.ontrack = (event)=>{
             const remoteStream = event.streams[0]
             if(!remoteStream) return;
+
              // Identify whether this is the screen or camera stream
              const isScreenShare = remoteStream.id === peer.remoteScreenStreamId
+
+             console.log("REMOTE TRACK RECEIVED:",{
+              socketId:targetSocketId,
+              userName:targetUser?.userName,
+              streamId:remoteStream.id
+             });
+             
             setRemoteUsers((prev)=> {
               // if a new presenter starts , remove the previous screen form UI
               
@@ -549,6 +557,11 @@ const handleAnswer = async ({responderSocketId,sdp,screenStreamId})=>{
                         peersRef.current.delete(socketId)
 
                   }
+                  console.log("USER LEFT:",{
+                   socketId,
+                   userName:leftUser?.userName
+
+                  })
                  // Clean up pending ICE candidate
 
                  icecandidateQueue.current.delete(socketId)
