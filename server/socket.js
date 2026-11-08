@@ -1,3 +1,4 @@
+import { authenticateRequest } from "@clerk/express"
 import { sql } from "./config/db.js"
 
 // Socket.IO Room State: roomId -> Map<socketId,participantObject>
@@ -16,6 +17,8 @@ io.on("connection",(socket)=>{
     if(!currentRoomId) return;
     const roomId = currentRoomId
     const roomParticipants = rooms.get(roomId)
+
+
 
     if(roomParticipants){
         roomParticipants.delete(socket.id)
@@ -50,7 +53,7 @@ io.on("connection",(socket)=>{
  socket.on("join-room",async ({roomId,user,audioEnabled = true,videoEnabled = true})=>{
 
   try {
-      // Identity comes from the verified Clerk toke
+      // Identity comes from the verified Clerk token
     const authenticatedUserId = socket.data.userId
 
     if(!authenticatedUserId || !roomId) return;
@@ -113,6 +116,17 @@ io.on("connection",(socket)=>{
 
 const roomParticipants = rooms.get(roomId)
 
+let oldSocketToRemove = null
+
+for(const [oldSocketId, participant] of roomParticipants){
+    if(participant.userId === authenticatedUserId && oldSocketId !== socket.id){
+       oldSocketToRemove = oldSocket
+       break;
+
+     
+    }
+}
+
 
 // Fetch host plan to enforce participants limit (10 for Free,100 for Premium)
 
@@ -123,9 +137,11 @@ const hostPlan = hosts[0]?.plan || "free"
 
 const maxParticipants = hostPlan === "premium"?100:10
 
-if(roomParticipants.size >= maxParticipants ){
+const effectiveToomSize = roomParticipants.size - (oldSocketToRemove?1:0)
+
+if(effectiveToomSize>= maxParticipants ){
     socket.emit("meeting-ended",{
-        message:`Meeting capacity limot reached (max ${maxParticipants}
+        message:`Meeting capacity limit reached (max ${maxParticipants}
         participants for ${hostPlan.toUpperCase()} plan). Host must upgrade to Premium for upto 100 participants!
         `
     })
@@ -137,11 +153,20 @@ currentRoomId = roomId;
 socket.join(roomId)
 
 // Get existing participants in the room
-const existingUsers = Array.from(roomParticipants.values())
+const existingUsers = Array.from(roomParticipants.values()).filter(p=>p.userId !== authenticatedUserId)
 
 // Add new participants to socket state
 
 roomParticipants.set(socket.id,currentUser)
+
+if(oldSocketToRemove){
+    const oldSocket = io.sockets.sockets.get(oldSocketToRemove);
+
+    if(oldSocket){
+              console.log("DISCONNECTING OLD SOCKET:", oldSocketToRemove);
+              oldSocket.disconnect(true);
+    }
+}
 
 
 // Save partcipant to DB if not already present
