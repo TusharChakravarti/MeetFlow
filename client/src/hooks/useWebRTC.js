@@ -231,7 +231,7 @@ const {getToken,isLoaded,isSignedIn} = useAuth()
                 ...updatedUsers,
                 {
                   socketId:targetSocketId,
-                  userId:targetUser?.id,
+                  userId:targetUser?.userId,
                   userName:targetUser?.userName || "Partcipant",
                   cameraStream: isScreenShare?null:remoteStream,
                   screenStream:isScreenShare?remoteStream:null,
@@ -368,6 +368,24 @@ if(!isLoaded || !isSignedIn || !roomId || !user || !enabled) return;
 
 let isMounted = true;
 
+let hasConnectedOnce = false;
+
+const hanldeSocketConnect = ()=>{
+      // Clean up only when reconnecting but not on the first connection
+  if(hasConnectedOnce){
+    peersRef.current.forEach(peer =>peer.close())
+    peersRef.current.clear();
+
+    icecandidateQueue.current.clear()
+    processingCandidates.current.clear()
+
+    setRemoteUsers([])
+  }
+
+  hasConnectedOnce = true
+  joinRoom()
+  }
+
   //Join only after connection
 const joinRoom = ()=>{
   socket.emit("join-room",{
@@ -395,6 +413,8 @@ const handleAllUsers = async({users,activePresenterId})=>{
 const handleUserJoined = (newUser)=>{
   toast(`${newUser.userName} joined the meeting` , { icon: "👋" })
       createPeerConnection(newUser.socketId,newUser)
+
+     
 }
 
 const handleOffer = async ({callerSocketId, sdp,callerUser,screenStreamId})=>{
@@ -663,7 +683,7 @@ const startSession = async ()=>{
 
 
 
-socket.on("connect",joinRoom);
+socket.on("connect",hanldeSocketConnect);
 socket.on("connect_error",handleSocketConnectError)
 const connectSocket = async ()=>{
   try {
@@ -693,7 +713,7 @@ try {
   
   }
   else{
-    joinRoom()
+   hanldeSocketConnect()
   }
     
   } catch (error) {
@@ -730,7 +750,7 @@ connectSocket()
     peersRef.current.clear()
 
        // Off socket listeners
-       socket.off("connect",joinRoom)
+       socket.off("connect",hanldeSocketConnect)
    socket.off("all-users",handleAllUsers)
    socket.off("user-joined",handleUserJoined)
    socket.off("offer",handleOffer)

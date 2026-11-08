@@ -13,16 +13,34 @@ io.on("connection",(socket)=>{
  let currentRoomId = null
  let currentUser = null
 
- const leaveCurrentRoom = ()=>{
+ const leaveCurrentRoom = async ()=>{
     if(!currentRoomId) return;
     const roomId = currentRoomId
+   
+    const meeting = await sql`
+     SELECT id FROM meetings 
+     WHERE meeting_id = ${roomId}
+    `
+
+    if(meeting.length>0 && currentUser?.userId){
+        await sql`
+        UPDATE meeting_participants 
+        SET left_at = NOW()
+        WHETRE meeting_id = ${meeting[0].id}
+        and user_id = ${currentUser.id}
+        AND left_at IS NULL
+        `
+    }
+
     const roomParticipants = rooms.get(roomId)
 
 
 
     if(roomParticipants){
+        const wasPresent = roomParticipants.has(socket.id)
         roomParticipants.delete(socket.id)
-        if(roomParticipants.size === 0){
+        if(wasPresent){
+  if(roomParticipants.size === 0){
             rooms.delete(roomId)
                // No participants left, so remove presenter ownership
             activePresenters.delete(roomId)
@@ -34,6 +52,8 @@ io.on("connection",(socket)=>{
             })
         }
 
+        }
+      
 
 
      
@@ -63,7 +83,7 @@ io.on("connection",(socket)=>{
     }
 
     if(currentRoomId && roomId!==currentRoomId){
-        leaveCurrentRoom()
+        await leaveCurrentRoom()
 
     }
 
@@ -147,8 +167,7 @@ if(effectiveToomSize>= maxParticipants ){
     })
     return;
 }
-// Stop processing if the socket disconnected during DB queries
-if(!socket.connected) return;
+
 currentRoomId = roomId;
 socket.join(roomId)
 
@@ -165,6 +184,9 @@ if(oldSocketToRemove){
     if(oldSocket){
               console.log("DISCONNECTING OLD SOCKET:", oldSocketToRemove);
               oldSocket.disconnect(true);
+    }
+    else{
+        roomParticipants.delete(oldSocketToRemove)
     }
 }
 
@@ -191,6 +213,9 @@ if(existingParticipants.length === 0 ){
 
 const activePresenterId = activePresenters.get(roomId) || null
 
+// Stop processing if the socket disconnected during DB queries
+if(!socket.connected || currentRoomId!==roomId) return;
+
 socket.emit("all-users",{
     users:existingUsers,
     activePresenterId
@@ -204,7 +229,7 @@ socket.to(roomId).emit("user-joined",currentUser)
   } catch (err) {
     console.error("Error joining room in socket:",err)
     if(currentRoomId){
-        leaveCurrentRoom()
+        await leaveCurrentRoom()
     }
     socket.emit("meeting-ended",{
         message:"Failed to join room."
@@ -456,20 +481,20 @@ if(!currentUser?.isHost) return;
 
 // Leave room
 
-socket.on("leave-room",()=>{
-    leaveCurrentRoom()
+socket.on("leave-room",async ()=>{
+   await leaveCurrentRoom()
 })
 
 // Handle Disconnect (Reloading window,network drop or closing tab)
 
-socket.on("disconnect",(reason)=>{
+socket.on("disconnect",async(reason)=>{
         console.log("SOCKET DISCONNECTED:", {
         socketId: socket.id,
         userName: currentUser?.userName,
         reason
     });
 
-    leaveCurrentRoom()
+    await leaveCurrentRoom()
 }
 )
 
