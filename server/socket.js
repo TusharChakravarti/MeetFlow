@@ -120,7 +120,7 @@ let oldSocketToRemove = null
 
 for(const [oldSocketId, participant] of roomParticipants){
     if(participant.userId === authenticatedUserId && oldSocketId !== socket.id){
-       oldSocketToRemove = oldSocket
+       oldSocketToRemove = oldSocketId
        break;
 
      
