@@ -437,7 +437,13 @@ socket.on("leave-room",()=>{
 
 // Handle Disconnect (Reloading window,network drop or closing tab)
 
-socket.on("disconnect",()=>{
+socket.on("disconnect",(reason)=>{
+        console.log("SOCKET DISCONNECTED:", {
+        socketId: socket.id,
+        userName: currentUser?.userName,
+        reason
+    });
+
     leaveCurrentRoom()
 }
 )
