@@ -26,7 +26,7 @@ io.on("connection",(socket)=>{
         await sql`
         UPDATE meeting_participants 
         SET left_at = NOW()
-        WHETRE meeting_id = ${meeting[0].id}
+        WHERE meeting_id = ${meeting[0].id}
         and user_id = ${currentUser.id}
         AND left_at IS NULL
         `
