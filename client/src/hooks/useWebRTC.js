@@ -2,6 +2,7 @@ import React, { captureOwnerStack, useCallback, useEffect, useRef, useState } fr
 import {socket} from "../config/socket"
 import toast from 'react-hot-toast';
 import {useAuth} from "@clerk/react"
+import { connect } from 'socket.io-client';
 
 
 
@@ -573,7 +574,8 @@ const handleAnswer = async ({responderSocketId,sdp,screenStreamId})=>{
 
 }
 
-          
+
+    
               
             
               
@@ -651,6 +653,17 @@ const handleAnswer = async ({responderSocketId,sdp,screenStreamId})=>{
                   toast.error(error.message||"Unable to connect to meeting")
                 }
 
+  const handleDisconnect= (reason,details) =>{
+ console.error("Socket disconnect event:",{
+  reason,
+  socketId:socket.id,
+  connect:socket.connect,
+  details
+ });
+ 
+}
+      
+
 const startSession = async ()=>{
 
 
@@ -713,6 +726,7 @@ const startSession = async ()=>{
 
 socket.on("connect",hanldeSocketConnect);
 socket.on("connect_error",handleSocketConnectError)
+socket.on("disconnect",handleDisconnect)
 const connectSocket = async ()=>{
   try {
       socket.auth = async (callback)=>{
@@ -798,6 +812,7 @@ connectSocket()
   socket.off("user-left",handleUserLeft);
   socket.off("meeting-ended",handleMeetingEnded);
   socket.off("connect_error", handleSocketConnectError);
+  socket.off("disconnect", handleDisconnect);
  socket.off("screen-share-approved", handleScreenShareApproved);
 socket.off("force-stop-screen-share", handleForceStopScreenShare);
 socket.off("screen-share-stopped", handleScreenShareStopped);
