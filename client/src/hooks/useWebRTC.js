@@ -364,7 +364,19 @@ const handleScreenShareEnded = ()=>{
 
   useEffect(()=>{
 
+    console.log("WEBRTC EFFECT STARTED",{
+    roomId,
+    userId: user?.id,
+    isLoaded,
+    isSignedIn,
+    enabled,
+    socketId: socket.id,
+    connected: socket.connected
+    })
+
 if(!isLoaded || !isSignedIn || !roomId || !user || !enabled) return;
+
+
 
 let isMounted = true;
 
@@ -372,6 +384,11 @@ let hasConnectedOnce = false;
 
 const hanldeSocketConnect = ()=>{
       // Clean up only when reconnecting but not on the first connection
+
+      console.log("SOCKET CONNECT EVENT", {
+    socketId: socket.id,
+    hasConnectedOnce
+});
   if(hasConnectedOnce){
     peersRef.current.forEach(peer =>peer.close())
     peersRef.current.clear();
@@ -388,6 +405,11 @@ const hanldeSocketConnect = ()=>{
 
   //Join only after connection
 const joinRoom = ()=>{
+  console.log("FRONTEND JOIN ROOM EMITTED", {
+    socketId: socket.id,
+    roomId,
+    userId: user?.id
+});
   socket.emit("join-room",{
     roomId,
     user,
@@ -416,6 +438,11 @@ const handleUserJoined = (newUser)=>{
 
      
 }
+
+console.log("FRONTEND USER JOINED EVENT", {
+    socketId: newUser.socketId,
+    userId: newUser.userId
+});
 
 const handleOffer = async ({callerSocketId, sdp,callerUser,screenStreamId})=>{
 
@@ -709,6 +736,10 @@ try {
   }
 
   if(!socket.connected){
+    console.log("CALLING SOCKET.CONNECT", {
+    connected: socket.connected,
+    socketId: socket.id
+});
     socket.connect();
   
   }
@@ -741,6 +772,11 @@ connectSocket()
          // Cleanup on leave/unmount
 
   return ()=>{
+    console.log("WEBRTC EFFECT CLEANUP", {
+    socketId: socket.id,
+    connected: socket.connected,
+    roomId
+});
     isMounted = false
           
  

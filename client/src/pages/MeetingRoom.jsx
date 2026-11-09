@@ -162,7 +162,7 @@ return {
         localAudio = {audioEnabled}
         localVideo = {videoEnabled}
         remoteUsers = {remoteUsers}
-        meetingHostId = {userData.id}
+        meetingHostId = {hostId}
         />
 
 
