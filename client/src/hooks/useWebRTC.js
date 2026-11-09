@@ -433,16 +433,17 @@ const handleAllUsers = async({users,activePresenterId})=>{
 }
 
 const handleUserJoined = (newUser)=>{
+  console.log("FRONTEND USER JOINED EVENT", {
+    socketId: newUser.socketId,
+    userId: newUser.userId
+});
   toast(`${newUser.userName} joined the meeting` , { icon: "👋" })
       createPeerConnection(newUser.socketId,newUser)
 
      
 }
 
-console.log("FRONTEND USER JOINED EVENT", {
-    socketId: newUser.socketId,
-    userId: newUser.userId
-});
+
 
 const handleOffer = async ({callerSocketId, sdp,callerUser,screenStreamId})=>{
 
