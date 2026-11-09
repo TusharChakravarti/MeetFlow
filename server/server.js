@@ -50,7 +50,9 @@ app.post("/api/webhooks/razorpay",express.raw({type:"application/json"}), handle
     cors:{
         origin:allowedOrigins,
         credentials:true
-    }
+    },
+    pingInterval:25000,
+    pingTimeout:60000
  })
 // Authenticate every Socket.IO connection
  io.use(async (socket,next)=>{
