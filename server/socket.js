@@ -73,7 +73,7 @@ io.on("connection",(socket)=>{
     }
     
    } catch (error) {
-    console.error("left_at update failed:",err);
+    console.error("left_at update failed:",error);
     
    }
 
