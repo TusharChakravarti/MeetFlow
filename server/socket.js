@@ -28,7 +28,7 @@ io.on("connection",(socket)=>{
    if(roomParticipants){
     const wasPresent = roomParticipants.delete(socket.id)
       // Check whether another socket for this user is still in the room
-     activeElsewhere:leavingUser?.userId?
+     activeElsewhere = leavingUser?.userId?
      [...roomParticipants.values()].some(
         (participant)=>participant.userId === leavingUser.userId
      ):false;
@@ -65,9 +65,9 @@ io.on("connection",(socket)=>{
         WHERE meeting_id = 
         (
         SELECT id FROM meetings
-        WHERE meeting_id == ${roomId}
+        WHERE meeting_id = ${roomId}
         )
-        and user_id = ${currentUser.userId}
+        and user_id = ${leavingUser.userId}
         AND left_at IS NULL
         `
     }
@@ -252,7 +252,7 @@ else{
     await sql`
     UPDATE meeting_participants
     SET left_at = NULL
-    joined_at = NOW()
+    joined_at = NOW(),
     name = ${currentUser.userName}
     WHERE id = ${existingParticipants[0].id}
     `
