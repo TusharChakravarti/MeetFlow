@@ -251,7 +251,7 @@ if(existingParticipants.length === 0 ){
 else{
     await sql`
     UPDATE meeting_participants
-    SET left_at = NULL
+    SET left_at = NULL,
     joined_at = NOW(),
     name = ${currentUser.userName}
     WHERE id = ${existingParticipants[0].id}
