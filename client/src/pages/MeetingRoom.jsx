@@ -47,7 +47,7 @@ return {
 
   // Initialize WebRTC
 
-  const {localStream,captureStream,screenRecording,startScreenShare,stopScreenShare,remoteUsers,audioEnabled,videoEnabled,toggleAudio,toggleVideo,endMeeting} = useWebRTC(meetingId,userData,handleMeetingEnded)
+  const {localStream,captureStream,screenRecording,startScreenShare,stopScreenShare,remoteUsers,audioEnabled,videoEnabled,toggleAudio,toggleVideo,endMeeting} = useWebRTC(meetingId,userData,handleMeetingEnded,!loadingMeeting && !!meeting)
 
   // Initialize Chat
 

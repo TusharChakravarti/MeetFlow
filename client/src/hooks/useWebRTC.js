@@ -17,6 +17,11 @@ const ICE_SERVERS = {
 const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
   
 const {getToken,isLoaded,isSignedIn} = useAuth()
+const getTokenRef = useRef(getToken)
+const onMeetingEndedRef = useRef(onMeetingEnded)
+useEffect(() => { onMeetingEndedRef.current = onMeetingEnded; }, [onMeetingEnded]);
+
+useEffect(()=>getTokenRef.current = getToken,[getToken])
   const [localStream,setLocalStream] = useState(null)
   const [remoteUsers,setRemoteUsers] = useState([]) // Array of { socketId, userId, userName, stream, audioEnabled, videoEnabled }
   const [audioEnabled,setAudioEnabled] = useState(true)
@@ -639,9 +644,9 @@ const handleAnswer = async ({responderSocketId,sdp,screenStreamId})=>{
 
                 const handleMeetingEnded = ({message})=>{
                       toast.error(message||"This meeting has ended")
-                      if(onMeetingEnded){
-                    onMeetingEnded(message)
-                      }
+                    
+                  onMeetingEndedRef.current?.(message)
+                      
                     
                   
                      }
@@ -658,7 +663,7 @@ const handleAnswer = async ({responderSocketId,sdp,screenStreamId})=>{
                 }
 
   const handleDisconnect= (reason,details) =>{
-if(reason === "io server disconnnect"){
+if(reason === "io server disconnect"){
   toast.error("You joined meeting from another tab")
 }
  
@@ -732,7 +737,7 @@ const connectSocket = async ()=>{
   try {
       socket.auth = async (callback)=>{
 try {
-    const freshToken = await getToken({
+    const freshToken = await getTokenRef.current({
       skipCache:true
     })
 
@@ -843,7 +848,7 @@ socket.off("screen-share-stopped", handleScreenShareStopped);
   }
 
 
-  },[roomId,user?.id,enabled,createPeerConnection,initLocalStream,onMeetingEnded,getToken,isLoaded,isSignedIn])
+  },[roomId,user?.id,enabled,isLoaded,isSignedIn])
 
 
   
