@@ -16,31 +16,25 @@ io.on("connection",(socket)=>{
  const leaveCurrentRoom = async ()=>{
     if(!currentRoomId) return;
     const roomId = currentRoomId
-   
-    const meeting = await sql`
-     SELECT id FROM meetings 
-     WHERE meeting_id = ${roomId}
-    `
+    const leavingUser = currentUser
 
-    if(meeting.length>0 && currentUser?.userId){
-        await sql`
-        UPDATE meeting_participants 
-        SET left_at = NOW()
-        WHERE meeting_id = ${meeting[0].id}
-        and user_id = ${currentUser.id}
-        AND left_at IS NULL
-        `
-    }
+    // Clean up in memory state
+    currentRoomId = null
+    currentUser = null
 
     const roomParticipants = rooms.get(roomId)
 
+    let activeElsewhere  =  false;
+   if(roomParticipants){
+    const wasPresent = roomParticipants.delete(socket.id)
+      // Check whether another socket for this user is still in the room
+     activeElsewhere:leavingUser?.userId?
+     [...roomParticipants.values()].some(
+        (participant)=>participant.userId === leavingUser.userId
+     ):false;
 
-
-    if(roomParticipants){
-        const wasPresent = roomParticipants.has(socket.id)
-        roomParticipants.delete(socket.id)
-        if(wasPresent){
-  if(roomParticipants.size === 0){
+     if(wasPresent){
+    if(roomParticipants.size === 0){
             rooms.delete(roomId)
                // No participants left, so remove presenter ownership
             activePresenters.delete(roomId)
@@ -48,26 +42,61 @@ io.on("connection",(socket)=>{
         else{
             socket.to(roomId).emit("user-left",{
                 socketId:socket.id,
-                user:currentUser
+                user:leavingUser
             })
         }
 
+     }
+   
+
         }
-      
-
-
-     
-    }
-        if(activePresenters.get(roomId) === socket.id){
+               if(activePresenters.get(roomId) === socket.id){
      activePresenters.delete(roomId)
   }
 
-   socket.leave(roomId)
-    currentRoomId = null;
-    currentUser = null;
+  socket.leave(roomId)
+
+   // 2. Update database after in-memory cleanup
+   try {
+        if(leavingUser?.userId && !activeElsewhere){
+        await sql`
+        UPDATE meeting_participants 
+        SET left_at = NOW()
+        WHERE meeting_id = 
+        (
+        SELECT id FROM meetings
+        WHERE meeting_id == ${roomId}
+        )
+        and user_id = ${currentUser.userId}
+        AND left_at IS NULL
+        `
+    }
+    
+   } catch (error) {
+    console.error("left_at update failed:",err);
+    
+   }
 
 
-}
+
+
+
+
+   }
+  
+   
+
+ 
+
+    
+
+
+
+
+
+
+
+
 
  // User joins a meeting Room
  socket.on("join-room",async ({roomId,user,audioEnabled = true,videoEnabled = true})=>{
@@ -216,6 +245,16 @@ if(existingParticipants.length === 0 ){
     await sql`
     INSERT INTO meeting_participants (meeting_id,user_id,name,joined_at)
     VALUES (${meeting.id}, ${authenticatedUserId},${currentUser.userName},NOW())
+  
+    `
+}
+else{
+    await sql`
+    UPDATE meeting_participants
+    SET left_at = NULL
+    joined_at = NOW(
+    name = ${currentUser.userName}
+    WHERE id = ${existingParticipants[0].id}
     `
 }
  

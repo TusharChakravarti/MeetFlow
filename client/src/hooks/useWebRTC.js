@@ -597,9 +597,13 @@ const handleAnswer = async ({responderSocketId,sdp,screenStreamId})=>{
               }
 
               const handleUserLeft = ({socketId,user: leftUser})=>{
+               if(leftUser?.userId === user.id){
+                     return;
+               }
                   if(leftUser){
                     toast(`${leftUser.userName} left the meeting`)
                   }
+                  
                   const peer = peersRef.current.get(socketId)
 
                   if(peer){
@@ -654,12 +658,9 @@ const handleAnswer = async ({responderSocketId,sdp,screenStreamId})=>{
                 }
 
   const handleDisconnect= (reason,details) =>{
- console.error("Socket disconnect event:",{
-  reason,
-  socketId:socket.id,
-  connect:socket.connect,
-  details
- });
+if(reason === "io server disconnnect"){
+  toast.error("You joined meeting from another tab")
+}
  
 }
       
