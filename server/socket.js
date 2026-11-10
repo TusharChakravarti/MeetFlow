@@ -100,11 +100,7 @@ io.on("connection",(socket)=>{
 
  // User joins a meeting Room
  socket.on("join-room",async ({roomId,user,audioEnabled = true,videoEnabled = true})=>{
-    console.log("BACKEND JOIN ROOM RECEIVED", {
-    socketId: socket.id,
-    userId: socket.data.userId,
-    roomId
-});
+
 
   try {
       // Identity comes from the verified Clerk token
@@ -216,12 +212,7 @@ if(oldSocketToRemove){
     const oldSocket = io.sockets.sockets.get(oldSocketToRemove);
 
     if(oldSocket){
-              console.log("DISCONNECTING OLD SOCKET:",{
-                   oldSocketId: oldSocketToRemove,
-    newSocketId: socket.id,
-    userId: authenticatedUserId,
-    roomId
-              });
+       
               oldSocket.disconnect(true);
     }
     else{
@@ -536,12 +527,8 @@ socket.on("leave-room",async ()=>{
 
 // Handle Disconnect (Reloading window,network drop or closing tab)
 
-socket.on("disconnect",async(reason)=>{
-        console.log("SOCKET DISCONNECTED:", {
-        socketId: socket.id,
-        userName: currentUser?.userName,
-        reason
-    });
+socket.on("disconnect",async()=>{
+
 
     await leaveCurrentRoom()
 }

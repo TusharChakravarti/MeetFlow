@@ -21,7 +21,7 @@ const getTokenRef = useRef(getToken)
 const onMeetingEndedRef = useRef(onMeetingEnded)
 useEffect(() => { onMeetingEndedRef.current = onMeetingEnded; }, [onMeetingEnded]);
 
-useEffect(()=>getTokenRef.current = getToken,[getToken])
+useEffect(()=>{getTokenRef.current = getToken},[getToken])
   const [localStream,setLocalStream] = useState(null)
   const [remoteUsers,setRemoteUsers] = useState([]) // Array of { socketId, userId, userName, stream, audioEnabled, videoEnabled }
   const [audioEnabled,setAudioEnabled] = useState(true)
@@ -199,11 +199,7 @@ useEffect(()=>getTokenRef.current = getToken,[getToken])
              // Identify whether this is the screen or camera stream
              const isScreenShare = remoteStream.id === peer.remoteScreenStreamId
 
-             console.log("REMOTE TRACK RECEIVED:",{
-              socketId:targetSocketId,
-              userName:targetUser?.userName,
-              streamId:remoteStream.id
-             });
+           
              
             setRemoteUsers((prev)=> {
               // if a new presenter starts , remove the previous screen form UI
@@ -370,15 +366,7 @@ const handleScreenShareEnded = ()=>{
 
   useEffect(()=>{
 
-    console.log("WEBRTC EFFECT STARTED",{
-    roomId,
-    userId: user?.id,
-    isLoaded,
-    isSignedIn,
-    enabled,
-    socketId: socket.id,
-    connected: socket.connected
-    })
+
 
 if(!isLoaded || !isSignedIn || !roomId || !user || !enabled) return;
 
@@ -391,10 +379,7 @@ let hasConnectedOnce = false;
 const hanldeSocketConnect = ()=>{
       // Clean up only when reconnecting but not on the first connection
 
-      console.log("SOCKET CONNECT EVENT", {
-    socketId: socket.id,
-    hasConnectedOnce
-});
+
   if(hasConnectedOnce){
     peersRef.current.forEach(peer =>peer.close())
     peersRef.current.clear();
@@ -411,11 +396,7 @@ const hanldeSocketConnect = ()=>{
 
   //Join only after connection
 const joinRoom = ()=>{
-  console.log("FRONTEND JOIN ROOM EMITTED", {
-    socketId: socket.id,
-    roomId,
-    userId: user?.id
-});
+
   socket.emit("join-room",{
     roomId,
     user,
@@ -439,10 +420,7 @@ const handleAllUsers = async({users,activePresenterId})=>{
 }
 
 const handleUserJoined = (newUser)=>{
-  console.log("FRONTEND USER JOINED EVENT", {
-    socketId: newUser.socketId,
-    userId: newUser.userId
-});
+
   toast(`${newUser.userName} joined the meeting` , { icon: "👋" })
       createPeerConnection(newUser.socketId,newUser)
 
@@ -616,11 +594,7 @@ const handleAnswer = async ({responderSocketId,sdp,screenStreamId})=>{
                         peersRef.current.delete(socketId)
 
                   }
-                  console.log("USER LEFT:",{
-                   socketId,
-                   userName:leftUser?.userName
-
-                  })
+                
                  // Clean up pending ICE candidate
 
                  icecandidateQueue.current.delete(socketId)
@@ -734,6 +708,7 @@ socket.on("connect",hanldeSocketConnect);
 socket.on("connect_error",handleSocketConnectError)
 socket.on("disconnect",handleDisconnect)
 const connectSocket = async ()=>{
+      if (!isMounted) return;
   try {
       socket.auth = async (callback)=>{
 try {
@@ -741,7 +716,7 @@ try {
       skipCache:true
     })
 
-    if(!freshToken){
+    if(!isMounted ||!freshToken){
        console.error("Clerk token not found");
        callback({token:null})
        return;
@@ -756,11 +731,10 @@ try {
   }
   }
 
+   if (!isMounted) return;
+
   if(!socket.connected){
-    console.log("CALLING SOCKET.CONNECT", {
-    connected: socket.connected,
-    socketId: socket.id
-});
+
     socket.connect();
   
   }
@@ -793,11 +767,7 @@ connectSocket()
          // Cleanup on leave/unmount
 
   return ()=>{
-    console.log("WEBRTC EFFECT CLEANUP", {
-    socketId: socket.id,
-    connected: socket.connected,
-    roomId
-});
+
     isMounted = false
           
  
