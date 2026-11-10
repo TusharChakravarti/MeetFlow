@@ -129,7 +129,7 @@ useEffect(()=>{getTokenRef.current = getToken},[getToken])
       peer.onconnectionstatechange = ()=>{
         const state = peer.connectionState;
        
-        if(state === "closed"|| state == "failed"){
+        if(state === "closed"|| state === "failed"){
           peer.close()
           if(peersRef.current.get(targetSocketId)===peer){
           peersRef.current.delete(targetSocketId)
@@ -376,6 +376,8 @@ let isMounted = true;
 
 let hasConnectedOnce = false;
 
+let hasJoinedRoom = false
+
 const hanldeSocketConnect = ()=>{
       // Clean up only when reconnecting but not on the first connection
 
@@ -397,6 +399,8 @@ const hanldeSocketConnect = ()=>{
   //Join only after connection
 const joinRoom = ()=>{
 
+  if(!isMounted || !socket.connected) return
+  hasJoinedRoom = true
   socket.emit("join-room",{
     roomId,
     user,
@@ -492,7 +496,7 @@ const handleAnswer = async ({responderSocketId,sdp,screenStreamId})=>{
                const stream = await initScreenShare()
            
                if(requestversion!==screenShareRequestVersionRef.current){
-                 stopScreenShare()
+                stream?.getTracks().forEach(track => track.stop())
                  return;
                 }
               if(!stream){
@@ -504,7 +508,12 @@ const handleAnswer = async ({responderSocketId,sdp,screenStreamId})=>{
               const screenTrack = stream.getVideoTracks()[0]
 
                if(!screenTrack){
-                stopScreenShare()
+                stream.getTracks.forEach(track =>track.stop())
+                captureStreamRef.current = null
+                setCaptureStream(null)
+                setScreenRecording(false)
+
+                socket.emit("cancel-screen-share",{roomId})
                 return
                }
 
