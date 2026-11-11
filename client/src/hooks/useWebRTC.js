@@ -45,11 +45,18 @@ const getIceServers = async ()=>{
       throw new Error("Turnix returned an invalid ICE server configuration")
     }
 
-    iceServersRef.current = 
-    [
-     ...googleStunServers,
-     ...turnixIceservers.slice(0,3)
-    ]
+    const MAX_URLS = 4;
+    let count = 0;
+    const limited = []
+
+    for(const s of [...googleStunServers,...turnixIceservers]){
+      const urls = (Array.isArray(s.urls)?s.urls:[s.urls]).slice(0,MAX_URLS-count)
+      if(!urls.length) break;
+      limited.push({...s,urls})
+      count+=urls.length
+    }
+
+    iceServersRef.current = limited
     return true;
   } catch (error) {
     console.error("Failed to fetch ICE servers:",error.response?.data || error.message);
@@ -568,6 +575,7 @@ const handleAnswer = async ({responderSocketId,sdp,screenStreamId,offerId})=>{
                   peer.remoteScreenStreamId = screenStreamId
                   await peer.setRemoteDescription(new RTCSessionDescription(sdp))
                   peer.currentOfferId = null
+                  awaitingAnswer = false
                       if (!isMounted) return;
                   await processCandidateQueue(responderSocketId,peer)
 
