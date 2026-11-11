@@ -363,7 +363,7 @@ try {
 
 export const getCredentials = async (req,res)=>{
     try {
-        const respone = await axios.post(
+        const response = await axios.post(
             process.env.TURNIX_API_URL,
             {
                 ttl:3600,
@@ -380,12 +380,12 @@ export const getCredentials = async (req,res)=>{
 
         res.status(200).json({
             success:true,
-            iceServers :respone.data.iceServers
+            iceServers :response.data.iceServers
         })
     } catch (error) {
         console.error(
             "Turnix API error:",
-       error.respone?.data ||error.message
+       error.response?.data ||error.message
         );
         
         res.status(502).json({

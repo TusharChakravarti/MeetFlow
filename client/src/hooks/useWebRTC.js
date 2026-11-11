@@ -46,7 +46,7 @@ const getIceServers = async ()=>{
       throw new Error("Turnix returned an invalid ICE server configuration")
     }
 
-    iceServerRef.current = 
+    iceServersRef.current = 
     [
      ...googleStunServers,
      ...turnixIceservers
