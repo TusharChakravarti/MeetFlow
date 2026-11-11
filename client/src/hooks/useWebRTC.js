@@ -48,7 +48,7 @@ const getIceServers = async ()=>{
     iceServersRef.current = 
     [
      ...googleStunServers,
-     ...turnixIceservers
+     ...turnixIceservers.slice(0,3)
     ]
     return true;
   } catch (error) {
