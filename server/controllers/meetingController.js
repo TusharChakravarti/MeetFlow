@@ -1,6 +1,7 @@
 // create meeting
 
 import { sql } from "../config/db.js";
+import axios from "axios"
 
 const generateMeetingId = ()=>{
     const chars = "abcdefghijklmnopqrstuvwxyz"
@@ -359,6 +360,40 @@ try {
 }
 }
 
+
+export const getCredentials = async (req,res)=>{
+    try {
+        const respone = await axios.post(
+            process.env.TURNIX_API_URL,
+            {
+                ttl:3600,
+
+            },
+            {
+                headers:{
+                    Authorization:`Bearer ${process.env.TURNIX_API_TOKEN}`,
+                    "Content-Type":"application/json"
+                },
+                timeout:10000
+            }
+        )
+
+        res.status(200).json({
+            success:true,
+            iceServers :respone.data.iceServers
+        })
+    } catch (error) {
+        console.error(
+            "Turnix API error:",
+       error.respone?.data ||error.message
+        );
+        
+        res.status(502).json({
+            success:false,
+            messages:"Failed to generate ICE credentials"
+        })
+    }
+}
 
 
 

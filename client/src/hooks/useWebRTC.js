@@ -3,22 +3,68 @@ import {socket} from "../config/socket"
 import toast from 'react-hot-toast';
 import {useAuth} from "@clerk/react"
 import { connect } from 'socket.io-client';
+import axios from "axios"
 
 
 
-const ICE_SERVERS = {
-    iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" },
-        { urls: "stun:stun2.l.google.com:19302" },
-    ],
-};
 
 const useWebRTC = (roomId,user,onMeetingEnded,enabled = true) => {
   
 const {getToken,isLoaded,isSignedIn} = useAuth()
 const getTokenRef = useRef(getToken)
+const iceServersRef = useRef(null)
 const onMeetingEndedRef = useRef(onMeetingEnded)
+
+const googleStunServers = [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+]
+
+const getIceServers = async ()=>{
+  try {
+    const token = await getTokenRef.current({
+      skipCache:true
+    })
+
+    if(!token){
+      throw new Error("Clerk token not available")
+    }
+
+    const response = await axios.get(
+      `${import.meta.env.VITE_BASE_URL || "http://localhost:3000"}/api/meetings/ice-servers`,
+      {
+        headers:{
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+
+    const turnixIceservers = response.data.iceServers
+
+    if(!Array.isArray(turnixIceservers) || turnixIceservers.length === 0){
+      throw new Error("Turnix returned an invalid ICE server configuration")
+    }
+
+    iceServerRef.current = 
+    [
+     ...googleStunServers,
+     ...turnixIceservers
+    ]
+    return true;
+  } catch (error) {
+    console.error("Failed to fetch ICE servers:",error.response?.data || error.message);
+
+    toast.error("Unable to initialize TURN connectivity")
+    return false
+    
+    
+  }
+}
+
+
+
+
 useEffect(() => { onMeetingEndedRef.current = onMeetingEnded; }, [onMeetingEnded]);
 
 useEffect(()=>{getTokenRef.current = getToken},[getToken])
@@ -122,8 +168,11 @@ useEffect(()=>{getTokenRef.current = getToken},[getToken])
 
     }
 
-       
-      const peer = new RTCPeerConnection(ICE_SERVERS)
+      if(!iceServersRef.current){
+        throw new Error("ICE servers have not been initialixed")
+      }
+    
+      const peer = new RTCPeerConnection({iceServers:iceServersRef.current})
 
          peer.polite = socket.id>targetSocketId
       peer.onconnectionstatechange = ()=>{
@@ -508,7 +557,7 @@ const handleAnswer = async ({responderSocketId,sdp,screenStreamId})=>{
               const screenTrack = stream.getVideoTracks()[0]
 
                if(!screenTrack){
-                stream.getTracks.forEach(track =>track.stop())
+                stream.getTracks().forEach(track =>track.stop())
                 captureStreamRef.current = null
                 setCaptureStream(null)
                 setScreenRecording(false)
@@ -655,6 +704,11 @@ if(reason === "io server disconnect"){
 
 const startSession = async ()=>{
 
+const iceReady = await getIceServers()
+
+if(!isMounted) return;
+
+if(!iceReady) return
 
 
    // Register socket listeners
