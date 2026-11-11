@@ -4,7 +4,7 @@ import { createMeeting, getCredentials, getMeeting, getMeetingStats, getSessionD
 
 const meetingRouter = express.Router()
 
-
+meetingRouter.post("/ice-servers",protect,getCredentials)
 
 meetingRouter.post("/",protect,createMeeting)
 
@@ -14,7 +14,7 @@ meetingRouter.get("/sessions",protect,getUserSessions)
 
 meetingRouter.get("/sessions/:id",protect,getSessionDetails)
 
-meetingRouter.post("/ice-servers",protect,getCredentials)
+
 
 meetingRouter.get("/:meetingId",protect,getMeeting)
 
