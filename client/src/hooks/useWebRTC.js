@@ -173,7 +173,7 @@ useEffect(()=>{getTokenRef.current = getToken},[getToken])
     
       const peer = new RTCPeerConnection(
         {iceServers:iceServersRef.current,
-          iceTransportPolicy:"relay"
+        iceTransportPolicy:"all"
 
 
         }
