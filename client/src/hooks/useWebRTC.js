@@ -172,7 +172,13 @@ useEffect(()=>{getTokenRef.current = getToken},[getToken])
         throw new Error("ICE servers have not been initialixed")
       }
     
-      const peer = new RTCPeerConnection({iceServers:iceServersRef.current})
+      const peer = new RTCPeerConnection(
+        {iceServers:iceServersRef.current,
+          iceTransportPolicy:"relay"
+
+
+        }
+      )
 
          peer.polite = socket.id>targetSocketId
       peer.onconnectionstatechange = ()=>{
