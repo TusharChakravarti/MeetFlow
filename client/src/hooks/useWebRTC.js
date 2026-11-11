@@ -2,7 +2,7 @@ import React, { captureOwnerStack, useCallback, useEffect, useRef, useState } fr
 import {socket} from "../config/socket"
 import toast from 'react-hot-toast';
 import {useAuth} from "@clerk/react"
-import { connect } from 'socket.io-client';
+
 import axios from "axios"
 
 
@@ -336,6 +336,23 @@ useEffect(()=>{getTokenRef.current = getToken},[getToken])
 
  peersRef.current.set(targetSocketId,peer)
 
+ setRemoteUsers(prev => prev.some(u=>u.socketId === targetSocketId)?
+ prev:
+ [
+  ...prev,{
+  socketId:targetSocketId,
+  userId:targetUser?.userId,
+  userName: targetUser?.userName || "Participant",
+  stream: null,
+  cameraStream: null,
+  screenStream: null,
+  audioEnabled:targetUser?.audioEnabled ?? true,
+  videoEnabled: targetUser?.videoEnabled ?? true,
+  }
+
+ ]
+)
+
 
  return peer
 
@@ -500,7 +517,7 @@ const handleAllUsers = async({users,activePresenterId})=>{
 const handleUserJoined = (newUser)=>{
 
   toast(`${newUser.userName} joined the meeting` , { icon: "👋" })
-      createPeerConnection(newUser.socketId,newUser)
+     
 
      
 }
@@ -576,6 +593,7 @@ const handleAnswer = async ({responderSocketId,sdp,screenStreamId,offerId})=>{
                   await peer.setRemoteDescription(new RTCSessionDescription(sdp))
                   peer.currentOfferId = null
                   peer.awaitingAnswer = false
+                  peer.ignoreOffer = false
                       if (!isMounted) return;
                   await processCandidateQueue(responderSocketId,peer)
 
@@ -632,42 +650,38 @@ const handleAnswer = async ({responderSocketId,sdp,screenStreamId,offerId})=>{
 
       const handleIceCandidate = async ({senderSocketId,candidate})=>{
 
-            try {
-               const peer = peersRef.current.get(senderSocketId)
-               if(peer?.ignoreOffer) return;
-                const iceCandidate = new RTCIceCandidate(candidate)
-                 // Peer doesn't exist OR remote description isn't ready
+        const peer = peersRef.current.get(senderSocketId)
+
+             // Peer doesn't exist OR remote description isn't ready
               if(!peer||!peer.remoteDescription||processingCandidates.current.has(senderSocketId)){
                 if(!icecandidateQueue.current.has(senderSocketId)){
                   icecandidateQueue.current.set(senderSocketId,[])
                 }
-                icecandidateQueue.current.get(senderSocketId).push(iceCandidate)
+                icecandidateQueue.current.get(senderSocketId).push(candidate)
                 return;
               }
 
+
+            try {
+                  await peer.addIceCandidate(candidate)
+            } catch (error) {
+                 if (!peer.ignoreOffer) {
+      console.error("Error adding ICE candidate:", error)
+    }
+            }
+               
+            
              
 
            
-
-                     
-                         await peer.addIceCandidate(iceCandidate)
-                      
-                  
-              
      
             
-} catch (error) {
-     console.error("Error handling ICE candidate:", error);
-
-}
+} 
 
 
     
               
-            
-              
-
-            }
+    
 
             const handleUserAudioToggle = ({socketId,audioEnabled})=>{
                 setRemoteUsers((prev)=>(prev).map(

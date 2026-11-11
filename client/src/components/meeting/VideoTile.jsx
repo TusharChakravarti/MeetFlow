@@ -23,8 +23,19 @@ const VideoTile = ({
     }
 
     },[stream])
+    const hasLiveVideo = stream?.getVideoTracks().some(t=>t.readyState === "live")
+    const showCameraOff = !videoEnabled || !hasLiveVideo;
 
-    const showCameraOff = !videoEnabled || !stream;
+    if(isLocal && isScreenShare){
+          return (
+      <div className="relative w-full h-full min-h-0 flex-1 bg-slate-900 rounded-2xl border border-slate-800 flex flex-col items-center justify-center gap-3 text-slate-300">
+        <Monitor className="w-10 h-10 text-emerald-300" />
+        <span className="text-sm font-medium">
+          You're sharing your screen
+        </span>
+      </div>
+    );
+    }
   return (
 <div className={`relative ${
   isScreenShare

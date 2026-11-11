@@ -1,4 +1,4 @@
-import React, { useState,useCallback, useMemo, useEffectEvent, useEffect } from 'react'
+import React, { useState,useCallback, useMemo, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { dummyMeetingDetails} from '../assets/asset'
 import {useAuth, useUser} from '@clerk/react'
