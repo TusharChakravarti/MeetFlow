@@ -575,7 +575,7 @@ const handleAnswer = async ({responderSocketId,sdp,screenStreamId,offerId})=>{
                   peer.remoteScreenStreamId = screenStreamId
                   await peer.setRemoteDescription(new RTCSessionDescription(sdp))
                   peer.currentOfferId = null
-                  awaitingAnswer = false
+                  peer.awaitingAnswer = false
                       if (!isMounted) return;
                   await processCandidateQueue(responderSocketId,peer)
 
