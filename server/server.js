@@ -20,10 +20,9 @@ import billingRouter from "./routes/PricingRoutes.js";
  try {
     await initDB()
  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-        message:"Error connecting with db"
-    })
+    console.error("Database initialization failed:",error);
+    process.exit(1)
+  
  }
 
 
