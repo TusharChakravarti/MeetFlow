@@ -309,7 +309,7 @@ socket.to(roomId).emit("user-joined",currentUser)
 
  // send the information needed to start the connection
 
- socket.on("offer",({targetSocketId,callerSocketId,sdp,screenStreamId})=>{
+ socket.on("offer",({targetSocketId,callerSocketId,sdp,screenStreamId,offerId})=>{
      if(!currentRoomId || callerSocketId !==socket.id) return;
      const participants = rooms.get(currentRoomId)
      if(!participants?.has(socket.id) || !participants.has(targetSocketId)) return;
@@ -317,7 +317,8 @@ socket.to(roomId).emit("user-joined",currentUser)
         callerSocketId,
         sdp,
         callerUser:currentUser,
-        screenStreamId
+        screenStreamId,
+        offerId
     })
  
  })
@@ -325,7 +326,7 @@ socket.to(roomId).emit("user-joined",currentUser)
 
  // WebRTC Signaling : Answer
 // accept the offer request and process connection
-  socket.on("answer",({targetSocketId,responderSocketId,sdp,screenStreamId})=>{
+  socket.on("answer",({targetSocketId,responderSocketId,sdp,screenStreamId,offerId})=>{
     if(!currentRoomId || responderSocketId !==socket.id) return
         const partcipants = rooms.get(currentRoomId)
 
@@ -334,7 +335,8 @@ socket.to(roomId).emit("user-joined",currentUser)
     io.to(targetSocketId).emit("answer",{
         responderSocketId,
         sdp,
-        screenStreamId
+        screenStreamId,
+        offerId
     })
  
  })

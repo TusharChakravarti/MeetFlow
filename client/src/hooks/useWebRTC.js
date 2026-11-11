@@ -17,8 +17,7 @@ const onMeetingEndedRef = useRef(onMeetingEnded)
 
 const googleStunServers = [
     { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:19302" },
+
 ]
 
 const getIceServers = async ()=>{
@@ -180,6 +179,8 @@ useEffect(()=>{getTokenRef.current = getToken},[getToken])
         }
       )
 
+
+      peer.currentOfferId = null
          peer.polite = socket.id>targetSocketId
       peer.onconnectionstatechange = ()=>{
         const state = peer.connectionState;
@@ -208,20 +209,31 @@ useEffect(()=>{getTokenRef.current = getToken},[getToken])
       }
 
        peer.onnegotiationneeded = async ()=>{
-        if(peer.signalingState !== "stable" || peer.makingOffer) return;
+        if(peer.signalingState !== "stable" || peer.makingOffer||peer.awaitingAnswer) return;
         try {
           peer.makingOffer = true;
     const offer = await peer.createOffer()
+
+
+
        // The other participant may have sent an offer while we awaited createOffer()
     if (peer.signalingState !== "stable") return;
     await peer.setLocalDescription(offer)
+     
+    const offerId = crypto.randomUUID()
+        peer.currentOfferId = offerId
+        
+    peer.awaitingAnswer = true
     socket.emit("offer",{
       targetSocketId,
       callerSocketId:socket.id,
       sdp:peer.localDescription,
-      screenStreamId:captureStreamRef.current?.id ?? null
+      screenStreamId:captureStreamRef.current?.id ?? null,
+      offerId
     })
         } catch (error) {
+             peer.currentOfferId = null;
+        peer.awaitingAnswer = false;
             console.error("Error during negotiation:", error);
         }
         finally{
@@ -488,7 +500,7 @@ const handleUserJoined = (newUser)=>{
 
 
 
-const handleOffer = async ({callerSocketId, sdp,callerUser,screenStreamId})=>{
+const handleOffer = async ({callerSocketId, sdp,callerUser,screenStreamId,offerId})=>{
 
  const peer = createPeerConnection(callerSocketId,callerUser)
 
@@ -502,7 +514,11 @@ const handleOffer = async ({callerSocketId, sdp,callerUser,screenStreamId})=>{
  }
 
            try {
-             if(offerCollition && peer.signalingState === "have-local-offer") await peer.setLocalDescription({type:"rollback"})
+             if(offerCollition && peer.signalingState === "have-local-offer") {
+              await peer.setLocalDescription({type:"rollback"})
+              peer.currentOfferId = null
+              peer.awaitingAnswer = false
+            }
 
             peer.remoteScreenStreamId = screenStreamId  
            await peer.setRemoteDescription(new RTCSessionDescription(sdp))
@@ -519,7 +535,8 @@ const handleOffer = async ({callerSocketId, sdp,callerUser,screenStreamId})=>{
               targetSocketId:callerSocketId,
               responderSocketId:socket.id,
               sdp:peer.localDescription,
-                screenStreamId:captureStreamRef.current?.id ?? null
+                screenStreamId:captureStreamRef.current?.id ?? null,
+                offerId
             })
 
             
@@ -530,19 +547,34 @@ const handleOffer = async ({callerSocketId, sdp,callerUser,screenStreamId})=>{
 
 }
 
-const handleAnswer = async ({responderSocketId,sdp,screenStreamId})=>{
+const handleAnswer = async ({responderSocketId,sdp,screenStreamId,offerId})=>{
               const peer = peersRef.current.get(responderSocketId);
-              if(peer){
+              if(!peer) return;
+
+              if(peer.currentOfferId !== offerId){
+                     console.warn("Ignoring answer for an outdated offer");
+                     return;
+              }
+
+              if(peer.signalingState !== "have-local-offer"){
+                console.warn("Ignoring stale or unexpected answer",{
+                  responderSocketId,
+                  signalingState:peer.signalingState
+                })
+                return;
+              }
+              
                 try {
                   peer.remoteScreenStreamId = screenStreamId
                   await peer.setRemoteDescription(new RTCSessionDescription(sdp))
+                  peer.currentOfferId = null
                       if (!isMounted) return;
                   await processCandidateQueue(responderSocketId,peer)
 
                 } catch (error) {
                    console.error("Error setting remote description from answer:", error);
                 }
-              }
+              
          }
 
          const handleScreenShareApproved = async ()=>{
