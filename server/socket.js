@@ -217,6 +217,11 @@ if(oldSocketToRemove){
     }
     else{
         roomParticipants.delete(oldSocketToRemove)
+        // Clear stale screen-share ownership if it belong to old socket
+
+        if(activePresenters.get(roomId) === oldSocketToRemove){
+            activePresenters.delete(roomId)
+        }
     }
 }
 
